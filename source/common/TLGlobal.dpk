@@ -1,0 +1,82 @@
+package TLGlobal;
+
+{$R *.res}
+{$IFDEF IMPLICITBUILDING This IFDEF should not be used by users}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO OFF}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS ON}
+{$RANGECHECKS ON}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DEFINE DEBUG}
+{$ENDIF IMPLICITBUILDING}
+{$RUNONLY}
+{$IMPLICITBUILD ON}
+
+requires
+  rtl,
+  vcl,
+  SBPluginR280,
+  SBVCL280,
+  SBActiveX280,
+  soaprtl,
+  dxCoreRS28,
+  cxLibraryRS28,
+  dxGDIPlusRS28,
+  dxComnRS28,
+  dxBarRS28,
+  dxmdsRS28,
+  cxGridRS28,
+  dxSpreadSheetCoreRS28,
+  vclAbsDBd28,
+  TMSVCLUIPackPkgDXE14,
+  TMSVCLUIPackPkgExDXE14,
+  TVidGrab,
+  LockBox3DR,
+  IndySystem,
+  IndyProtocols,
+  IndyCore,
+  Jcl;
+
+contains
+  Common.TLGlobal in 'Common.TLGlobal.pas',
+  Common.TLDM in 'Common.TLDM.pas' {TLDataModule: TDataModule},
+  Common.TLCommonLib in 'Common.TLCommonLib.pas',
+  Chilkat.Global in 'Chilkat.Global.pas',
+  Chilkat.CkDateTime in 'Chilkat.CkDateTime.pas',
+  Chilkat.JsonArray in 'Chilkat.JsonArray.pas',
+  Chilkat.JsonObject in 'Chilkat.JsonObject.pas',
+  Common.TLLayerForm in 'Common.TLLayerForm.pas' {TLLayerForm},
+  Common.MediaPlayThread in 'Common.MediaPlayThread.pas',
+  Common.TLAlertMsg in 'Common.TLAlertMsg.pas' {TLAlertBoxForm},
+  Common.TabTipHelper in 'Common.TabTipHelper.pas' {$WARN UNIT_PLATFORM ON},
+  Common.TLMsgBox in 'Common.TLMsgBox.pas' {TLMsgBoxForm},
+  Common.SevenZip in 'Common.SevenZip.pas',
+  Common.HTMLColorConversions in 'Common.HTMLColorConversions.pas',
+  Common.TLReceiptPrintManager in 'Common.TLReceiptPrintManager.pas',
+  fx.Base in 'fx.Base.pas',
+  fx.Json in 'fx.Json.pas',
+  fx.Logging in 'fx.Logging.pas',
+  Common.TLSelectPopup in 'Common.TLSelectPopup.pas' {SelectPopupForm},
+  Common.TLAdminCheck in 'Common.TLAdminCheck.pas' {TLAdminCheckForm},
+  Common.TLCipher in 'Common.TLCipher.pas',
+  Common.TLExceptDlg in 'Common.TLExceptDlg.pas' {ExceptionDialog},
+  Common.TLTicketPrintManager in 'Common.TLTicketPrintManager.pas';
+
+end.
+

@@ -1,0 +1,288 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{0FEEDFE6-7EA1-4F31-9C71-7C1C565E1137}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="plugin\_Template\TLTemplate.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="launcher\TLLauncher.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="setting\TLSetting.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="ticketprint\TLTicketPrint.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="common\TLGlobal.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="main\TLKiosk.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="plugin\Admin\TLAdmin.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="plugin\BarcodeReady\TLBarcodeReady.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="plugin\Dashboard\TLDashboard.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="plugin\MediaPlayer\TLMediaPlayer.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="plugin\Notice\TLNotice.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="plugin\PaymentCard\TLPaymentCard.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="plugin\PaymentComplete\TLPaymentComplete.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="plugin\PaymentPayco\TLPaymentPayco.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="plugin\PaymentPaycoPin\TLPaymentPaycoPin.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="plugin\Prepare\TLPrepare.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="plugin\PrintingMsg\TLPrintingMsg.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="plugin\ReceiptView\TLReceiptView.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="plugin\TicketHome\TLTicketHome.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="plugin\Ticketing\TLTicketing.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="plugin\TecketBuy\TLTicketBuy.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="plugin\WaitMsg\TLWaitMsg.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="TLTemplate">
+        <MSBuild Projects="plugin\_Template\TLTemplate.dproj"/>
+    </Target>
+    <Target Name="TLTemplate:Clean">
+        <MSBuild Projects="plugin\_Template\TLTemplate.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLTemplate:Make">
+        <MSBuild Projects="plugin\_Template\TLTemplate.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLLauncher">
+        <MSBuild Projects="launcher\TLLauncher.dproj"/>
+    </Target>
+    <Target Name="TLLauncher:Clean">
+        <MSBuild Projects="launcher\TLLauncher.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLLauncher:Make">
+        <MSBuild Projects="launcher\TLLauncher.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLSetting">
+        <MSBuild Projects="setting\TLSetting.dproj"/>
+    </Target>
+    <Target Name="TLSetting:Clean">
+        <MSBuild Projects="setting\TLSetting.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLSetting:Make">
+        <MSBuild Projects="setting\TLSetting.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLTicketPrint">
+        <MSBuild Projects="ticketprint\TLTicketPrint.dproj"/>
+    </Target>
+    <Target Name="TLTicketPrint:Clean">
+        <MSBuild Projects="ticketprint\TLTicketPrint.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLTicketPrint:Make">
+        <MSBuild Projects="ticketprint\TLTicketPrint.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLGlobal">
+        <MSBuild Projects="common\TLGlobal.dproj"/>
+    </Target>
+    <Target Name="TLGlobal:Clean">
+        <MSBuild Projects="common\TLGlobal.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLGlobal:Make">
+        <MSBuild Projects="common\TLGlobal.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLKiosk">
+        <MSBuild Projects="main\TLKiosk.dproj"/>
+    </Target>
+    <Target Name="TLKiosk:Clean">
+        <MSBuild Projects="main\TLKiosk.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLKiosk:Make">
+        <MSBuild Projects="main\TLKiosk.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLAdmin">
+        <MSBuild Projects="plugin\Admin\TLAdmin.dproj"/>
+    </Target>
+    <Target Name="TLAdmin:Clean">
+        <MSBuild Projects="plugin\Admin\TLAdmin.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLAdmin:Make">
+        <MSBuild Projects="plugin\Admin\TLAdmin.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLBarcodeReady">
+        <MSBuild Projects="plugin\BarcodeReady\TLBarcodeReady.dproj"/>
+    </Target>
+    <Target Name="TLBarcodeReady:Clean">
+        <MSBuild Projects="plugin\BarcodeReady\TLBarcodeReady.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLBarcodeReady:Make">
+        <MSBuild Projects="plugin\BarcodeReady\TLBarcodeReady.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLDashboard">
+        <MSBuild Projects="plugin\Dashboard\TLDashboard.dproj"/>
+    </Target>
+    <Target Name="TLDashboard:Clean">
+        <MSBuild Projects="plugin\Dashboard\TLDashboard.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLDashboard:Make">
+        <MSBuild Projects="plugin\Dashboard\TLDashboard.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLMediaPlayer">
+        <MSBuild Projects="plugin\MediaPlayer\TLMediaPlayer.dproj"/>
+    </Target>
+    <Target Name="TLMediaPlayer:Clean">
+        <MSBuild Projects="plugin\MediaPlayer\TLMediaPlayer.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLMediaPlayer:Make">
+        <MSBuild Projects="plugin\MediaPlayer\TLMediaPlayer.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLNotice">
+        <MSBuild Projects="plugin\Notice\TLNotice.dproj"/>
+    </Target>
+    <Target Name="TLNotice:Clean">
+        <MSBuild Projects="plugin\Notice\TLNotice.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLNotice:Make">
+        <MSBuild Projects="plugin\Notice\TLNotice.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLPaymentCard">
+        <MSBuild Projects="plugin\PaymentCard\TLPaymentCard.dproj"/>
+    </Target>
+    <Target Name="TLPaymentCard:Clean">
+        <MSBuild Projects="plugin\PaymentCard\TLPaymentCard.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLPaymentCard:Make">
+        <MSBuild Projects="plugin\PaymentCard\TLPaymentCard.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLPaymentComplete">
+        <MSBuild Projects="plugin\PaymentComplete\TLPaymentComplete.dproj"/>
+    </Target>
+    <Target Name="TLPaymentComplete:Clean">
+        <MSBuild Projects="plugin\PaymentComplete\TLPaymentComplete.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLPaymentComplete:Make">
+        <MSBuild Projects="plugin\PaymentComplete\TLPaymentComplete.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLPaymentPayco">
+        <MSBuild Projects="plugin\PaymentPayco\TLPaymentPayco.dproj"/>
+    </Target>
+    <Target Name="TLPaymentPayco:Clean">
+        <MSBuild Projects="plugin\PaymentPayco\TLPaymentPayco.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLPaymentPayco:Make">
+        <MSBuild Projects="plugin\PaymentPayco\TLPaymentPayco.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLPaymentPaycoPin">
+        <MSBuild Projects="plugin\PaymentPaycoPin\TLPaymentPaycoPin.dproj"/>
+    </Target>
+    <Target Name="TLPaymentPaycoPin:Clean">
+        <MSBuild Projects="plugin\PaymentPaycoPin\TLPaymentPaycoPin.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLPaymentPaycoPin:Make">
+        <MSBuild Projects="plugin\PaymentPaycoPin\TLPaymentPaycoPin.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLPrepare">
+        <MSBuild Projects="plugin\Prepare\TLPrepare.dproj"/>
+    </Target>
+    <Target Name="TLPrepare:Clean">
+        <MSBuild Projects="plugin\Prepare\TLPrepare.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLPrepare:Make">
+        <MSBuild Projects="plugin\Prepare\TLPrepare.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLPrintingMsg">
+        <MSBuild Projects="plugin\PrintingMsg\TLPrintingMsg.dproj"/>
+    </Target>
+    <Target Name="TLPrintingMsg:Clean">
+        <MSBuild Projects="plugin\PrintingMsg\TLPrintingMsg.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLPrintingMsg:Make">
+        <MSBuild Projects="plugin\PrintingMsg\TLPrintingMsg.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLReceiptView">
+        <MSBuild Projects="plugin\ReceiptView\TLReceiptView.dproj"/>
+    </Target>
+    <Target Name="TLReceiptView:Clean">
+        <MSBuild Projects="plugin\ReceiptView\TLReceiptView.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLReceiptView:Make">
+        <MSBuild Projects="plugin\ReceiptView\TLReceiptView.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLTicketHome">
+        <MSBuild Projects="plugin\TicketHome\TLTicketHome.dproj"/>
+    </Target>
+    <Target Name="TLTicketHome:Clean">
+        <MSBuild Projects="plugin\TicketHome\TLTicketHome.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLTicketHome:Make">
+        <MSBuild Projects="plugin\TicketHome\TLTicketHome.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLTicketing">
+        <MSBuild Projects="plugin\Ticketing\TLTicketing.dproj"/>
+    </Target>
+    <Target Name="TLTicketing:Clean">
+        <MSBuild Projects="plugin\Ticketing\TLTicketing.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLTicketing:Make">
+        <MSBuild Projects="plugin\Ticketing\TLTicketing.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLTicketBuy">
+        <MSBuild Projects="plugin\TecketBuy\TLTicketBuy.dproj"/>
+    </Target>
+    <Target Name="TLTicketBuy:Clean">
+        <MSBuild Projects="plugin\TecketBuy\TLTicketBuy.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLTicketBuy:Make">
+        <MSBuild Projects="plugin\TecketBuy\TLTicketBuy.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="TLWaitMsg">
+        <MSBuild Projects="plugin\WaitMsg\TLWaitMsg.dproj"/>
+    </Target>
+    <Target Name="TLWaitMsg:Clean">
+        <MSBuild Projects="plugin\WaitMsg\TLWaitMsg.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TLWaitMsg:Make">
+        <MSBuild Projects="plugin\WaitMsg\TLWaitMsg.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="TLTemplate;TLLauncher;TLSetting;TLTicketPrint;TLGlobal;TLKiosk;TLAdmin;TLBarcodeReady;TLDashboard;TLMediaPlayer;TLNotice;TLPaymentCard;TLPaymentComplete;TLPaymentPayco;TLPaymentPaycoPin;TLPrepare;TLPrintingMsg;TLReceiptView;TLTicketHome;TLTicketing;TLTicketBuy;TLWaitMsg"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="TLTemplate:Clean;TLLauncher:Clean;TLSetting:Clean;TLTicketPrint:Clean;TLGlobal:Clean;TLKiosk:Clean;TLAdmin:Clean;TLBarcodeReady:Clean;TLDashboard:Clean;TLMediaPlayer:Clean;TLNotice:Clean;TLPaymentCard:Clean;TLPaymentComplete:Clean;TLPaymentPayco:Clean;TLPaymentPaycoPin:Clean;TLPrepare:Clean;TLPrintingMsg:Clean;TLReceiptView:Clean;TLTicketHome:Clean;TLTicketing:Clean;TLTicketBuy:Clean;TLWaitMsg:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="TLTemplate:Make;TLLauncher:Make;TLSetting:Make;TLTicketPrint:Make;TLGlobal:Make;TLKiosk:Make;TLAdmin:Make;TLBarcodeReady:Make;TLDashboard:Make;TLMediaPlayer:Make;TLNotice:Make;TLPaymentCard:Make;TLPaymentComplete:Make;TLPaymentPayco:Make;TLPaymentPaycoPin:Make;TLPrepare:Make;TLPrintingMsg:Make;TLReceiptView:Make;TLTicketHome:Make;TLTicketing:Make;TLTicketBuy:Make;TLWaitMsg:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

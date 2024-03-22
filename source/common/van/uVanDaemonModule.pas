@@ -64,155 +64,57 @@ uses
   {$IF RTLVersion < 19.00}
   ScktComp,
   {$IFEND}
-  ShellApi, uVanFunctions, KisPosAgentLib_TLB, SmtSndRcvVCATLib_TLB;
+  ShellApi,
+  { van }
+  uVanType, uVanFunctions, KisPosAgentLib_TLB, SmtSndRcvVCATLib_TLB;
 
 const
-  // 밴사 코드
-  VAN_CODE_KFTC    = 'KFTC';
-  VAN_CODE_KICC    = 'KICC';
-  VAN_CODE_KIS     = 'KIS';
-  VAN_CODE_FDIK    = 'FDIK';
-  VAN_CODE_KOCES   = 'KOCES';
-  VAN_CODE_KSNET   = 'KSNET';
-  VAN_CODE_JTNET   = 'JTNET';
-  VAN_CODE_NICE    = 'NICE';
-  VAN_CODE_SMARTRO = 'SMARTRO';
-  VAN_CODE_KCP     = 'KCP';
-  VAN_CODE_DAOU    = 'DAOU';
-  VAN_CODE_KOVAN   = 'KOVAN';
-  VAN_CODE_SPC     = 'SPC';
+  MSG_ERR_DLL_LOAD        = ' 파일을 불러올 수 없습니다.';
+  MSG_ERR_SET_CONFIG_FAIL = '해당 설정은 현재 설정된 밴사에서는 사용할 수 없습니다.' + #13#10 +
+                            '(밴사에서 제공하는 프로그램에서 직접 설정하거나 사용되지 않음)';
+
+  STX              = #2;   // Start of Text
+  ETX              = #3;   // End of Text
+  EOT              = #4;   // End of Transmission
+  ENQ              = #5;   // ENQuiry
+  ACK              = #6;   // ACKnowledge
+  NAK              = #$15; // Negative Acknowledge (#21)
+  FS               = #$1C; // Field Separator (#28)
+  CR               = #13;  // Carriage Return
+  SI               = #15;
+
+  CASH_RCP_AUTO_NUMBER = '0100001234'; // 현금영수증 자진 발급 처리 번호
+
+  // KSNET
+  KSNET_DAEMON_DLL  = 'ksnetcomm.dll';
+  KSNET_SOLBIPOS    = 'SOLB'; // 업체정보
+
+  // JTNET
+  JTNET_DAEMON_DLL  = 'JTPosSeqDmDll.dll';
+
+  // NICE
+  NICE_DAEMON_DLL   = 'NVCAT.dll';
+
+  // FDIK
+  WIN4POS_DLL       = 'Win4POSDll.dll';
+
+  // Koces
+  filKOCESIC_DLL      = 'KocesICLib.dll';
+  filKOCESIC_DLL_Path = 'C:\Koces\KocesICPos\';
+  MSG_SOLBIPOS        = 'Solbipos POS System';
+
+  // DAOU
+  TERMINAL_GUBUN1   = '4             ';  // 단말기정보(일반)
+  TERMINAL_GUBUN2   = 'Y             ';  // 단말기정보(다중사업자)
+
+  // KOVAN
+  KOVAN_DAEMON_DLL  = 'VPos_Client.dll';
+
+  // SPC
+  SPC_DAEMON_DLL    = 'SpcnVirtualDll.dll';
+
 
 type
-  // 승인 전송정보 (데몬방식)
-  TCardSendInfoDM = record
-    // 공통 승인 정보
-    Approval: Boolean;                 // 승인/취소 여부
-    SaleAmt: Currency;                 // 결제(승인)금액 (수표금액)
-    SvcAmt: Currency;                  // 봉사료
-    VatAmt: Currency;                  // 부가세
-    FreeAmt: Currency;                 // 면세금액
-    CardNo: AnsiString;                // 카드번호(Key-in거래시 -> 카드번호=유효기간)
-    KeyInput: Boolean;                 // 키인여부
-    TrsType: AnsiString;               // 거래형태('':일반신용, 'A':앱카드)
-    OrgAgreeNo: AnsiString;            // 원승인번호(취소시)
-    OrgAgreeDate: AnsiString;          // 원승인일자(취소시)
-    // 신용카드 관련
-    HalbuMonth: Integer;               // 할부개월
-    EyCard: Boolean;                   // 은련카드 거래
-    // 현금영수증 관련
-    Person: Integer;                   // 거래(개인/사업자)구분 (1:소득공제, 2:지출증빙, 3:자진발급)
-    CancelReason: Integer;             // 취소사유코드 (1:거래취소, 2:오류발급, 3:기타)
-    // 수표조회 관련
-    CheckNo: AnsiString;               // 수표번호
-    BankCode: AnsiString;              // 발행은행코드
-    BranchCode: AnsiString;            // 발행은행 영업점코드
-    KindCode: AnsiString;              // 권종코드 (13:10만원, 14:30만원, 15:50만원, 16:100만원, 19:기타)
-    RegDate: AnsiString;               // 수표발행일
-    AccountNo: AnsiString;             // 계좌일련번호(단위농협/수협일 경우)
-    // 설정 정보 : 밴사별로 처리 방법이 다름 (아래 주석 내용 참조)
-    TerminalID: AnsiString;            // 승인 TID
-    BizNo: AnsiString;                 // 사업자번호
-    SignOption: AnsiString;            // 서명거래 옵션 (Y:서명사용, N:무서명, R:재사용, T:화면서명)
-    Reserved1: AnsiString;             // 예비항목1
-    Reserved2: AnsiString;             // 예비항목2
-    Reserved3: AnsiString;             // 예비항목3
-    OTCNo: AnsiString;                 // 앱카드 OTC번호
-    CardBinNo: AnsiString;             // 카드 Bin번호
-  end;
-
-(*
-  << TerminalID : 승인TID >>
-
-  KFTC    : 다중 사업자 결제시에만 사용 (데몬에 설정 있음, 미입력시 데몬 설정값 사용)
-  Kicc    : 다중 사업자 결제시에만 사용 (데몬에 설정 있음)
-  Kis     : 다중 사업자 결제시에만 사용 (데몬에 설정 있음, 미입력시 데몬 설정값 사용)
-  FDIK    : 필수 입력 (단말기 번호 대신 제품 일련 번호를 입력함)
-  Koces   : 다중 사업자 결제시에만 사용 (데몬에 설정 있음, 환경설정 비밀번호: 3415)
-  KSNET   : 필수 입력 (데몬에 설정 없음)
-  JTNET   : 필수 입력 (데몬에 설정 없음)
-  Nice    : 다중 사업자 결제시에만 사용 (데몬에 설정 있음, 미입력시 데몬 설정값 사용)
-  Smartro : 다중 사업자 결제시에만 사용 (데몬에 설정 있음, 환경설정 비밀번호: 7279 기타설정->기타설정탭에서 VCAT UI로 표시, 활성화 기능 사용안함에 체크할것.)
-  KCP     : 데몬 환경설정에 다중 단말기 사용에 체크된 경우에만 사용됨
-  DAOU    : 필수 입력 (데몬에 설정 있음)
-  KOVAN   : (환경설정 ID:0000 PW:1234)
-  SPC     : 필수 입력 (데몬에 설정 없음), 가맹점다운로드를 포스에서 해야함 데몬에 없음
-
-  << BizNo : 사업자번호 >>
-
-  KFTC    : 사용안함
-  Kicc    : 사용안함
-  Kis     : 사용안함
-  FDIK    : 승인 거래시 필수 입력
-  Koces   : 다중 사업자 결제시에만 사용
-  KSNET   : 사용안함
-  JTNET   : 사용안함
-  Nice    : 사용안함
-  Smartro : 사용안함
-  KCP     : 사용안함
-  DAOU    : 사용안함
-  KOVAN   : 다중 사업자 결제시에만 사용
-  SPC     : 가맹점 다운로드시 사업자번호 필수입력
-
-  << SignOption : 서명 거래 옵션 >>
-    Y : 장착된 서명패드를 사용함.(장치 포트 및 속도가 세팅되어 있어야 함)
-    N : 서명 안함. (서명패드가 장착되어 있으나 서명 없이 승인 처리 하고자 할때 사용)
-    R : 직전서명 재사용(다중 사업자 매장일때 한 전표에서 동일 카드로 두번의 승인을 할때 이전 거래한 서명을 재사용 하고자 할때 사용)
-    T : 화면서명 처리 (키오스크와 같이 부착된 서명패드 없이 화면 터치방식으로 처리함)
-
-  KFTC    : 사용가능 옵션 -> Y, N  나머지 기능은 미구현
-  Kicc    : 사용 안함. 데몬 환경설정에서 모두 설정함.
-  Kis     : 사용가능 옵션 -> Y, N, R 화면서명은 데몬설정에서 서명패드 Port를 -1으로 설정한다.
-  FDIK    : 사용가능 옵션 -> Y, N 화면서명은 환경설정 INI 파일에서 설정한다. CFG/Win4POS.ini -> VirtualSignpadUseYN=Y
-  Koces   : 사용 안함. 데몬 환경설정에서 모두 설정함.
-  KSNET   : 사용가능 옵션 -> Y, N, R, T
-  JTNET   : 사용가능 옵션 -> Y, N, R 화면서명은 데몬설정에서 서명패드 Port를 0으로 설정한다.
-  Nice    : 사용 안함. 데몬 환경설정에서 모두 설정함.
-  Smartro : 사용가능 옵션 -> Y, N 화면서명은 데몬에서 설정함.
-  KCP     : 사용 안함. 데몬 환경설정에서 모두 설정함.
-  DAOU    : 사용가능 옵션 -> T 데몬 설정에서 키오스크 모드로 설정할것. (INI파일 IS_KIOSK=Y)
-  KOVAN   : 사용가능 옵션 -> Y, R
-  SPC     : 사용가능 옵션 -> Y, N, R 화면서명은 데몬설정에서 서명패드 Port를 설정한다.
-
-  << Reserved1~3 : 예비항목 >>
-
-  KFTC    : 사용안함
-  Kicc    : 사용안함
-  Kis     : 사용안함
-  FDIK    : 사용안함
-  Koces   : 다중 사업자 결제시 Reserved1에 시리얼번호를 입력한다.
-  KSNET   : 사용안함
-  JTNET   : 사용안함
-  Nice    : 사용안함
-  Smartro : 사용안함
-  KCP     : 테슬라 매장용일때 Reserved1에 R/N번호를 넣는다. (OFFPG거래)
-  DAOU    : Reserved1에 부사업자 단말기번호를 넣는다. (다중사업자 결제시 부사업자로 승인 받는 경우만 사용)
-            주사업자 결제시에는 빈칸으로 넣는다. (ini 파일에 다중사업자 관련 세팅을 해야함.)
-  KOVAN   :
-  SPC     : Reserved1에 다중사업자 결제시 'Y'를 넣는다.
-*)
-
-  // 승인 응답정보 (데몬방식)
-  TCardRecvInfoDM = record
-    // 공통 응답
-    Result: Boolean;                   // 성공여부
-    Code: AnsiString;                  // 응답코드
-    Msg: AnsiString;                   // 응답메세지
-    AgreeNo: AnsiString;               // 승인번호
-    AgreeDateTime: AnsiString;         // 승인일시(yyyymmddhhnnss)
-    CardNo: AnsiString;                // 마스킹 카드번호
-    // 신용카드 응답일때만 아래 정보가 세팅됨.
-    TransNo: AnsiString;               // 거래번호
-    BalgupsaCode: AnsiString;          // 발급사코드
-    BalgupsaName: AnsiString;          // 발급사명
-    CompCode: AnsiString;              // 매입사코드
-    CompName: AnsiString;              // 매입사명
-    KamaengNo: AnsiString;             // 가맹점번호
-    AgreeAmt: Integer;                 // 승인금액
-    DCAmt: Integer;                    // 할인금액
-    // 신용승인 서명관련 (밴사에 따라 사용안함. 필수 항목이 아니므로 참고만 할것.)
-    IsSignOK: Boolean;                 // 정상 서명 여부 (응답전문에 해당 값이 없는 경우 True 리턴함)
-    CardBinNo: AnsiString;             // 카드 Bin번호
-  end;
 
   // 밴 데몬방식 상위 모듈
   TVanDaemon = class
@@ -233,14 +135,19 @@ type
     function CallCashIC(AInfo: TCardSendInfoDM): TCardRecvInfoDM; virtual; abstract;
     // 수표조회
     function CallCheck(AInfo: TCardSendInfoDM): TCardRecvInfoDM; virtual; abstract;
+    // 간편결제 승인
+    function CallAppPay(AInfo: TCardSendInfoDM): TCardRecvInfoDM; virtual; abstract;
     // 핀패드 입력
     function CallPinPad(ASendAmt: Integer; out ARecvData: AnsiString): Boolean; virtual; abstract;
     // 카드정보 조회
-    function CallCardInfo(AInfo: TCardSendInfoDM): TCardRecvInfoDM; virtual; abstract;
+    //function CallCardInfo(AInfo: TCardSendInfoDM): TCardRecvInfoDM; virtual; abstract;
+    function CallCardInfo: string; virtual; abstract;
     // 무결성 체크
-    function CallICReaderVerify(ATerminalID: string; out ARecvData: AnsiString): Boolean; virtual; abstract;
+    //function CallICReaderVerify(ATerminalID: string; out ARecvData: AnsiString): Boolean; virtual; abstract;
+    function CallICReaderVerify: Boolean; virtual; abstract;
     // 카드 삽입여부 체크
-    function CallICCardInsertionCheck(const ATerminalID: string; const ASamsungPay: Boolean; out ARespCode, ARecvData: AnsiString): Boolean; virtual; abstract;
+    //function CallICCardInsertionCheck(const ATerminalID: string; const ASamsungPay: Boolean; out ARespCode, ARecvData: AnsiString): Boolean; virtual; abstract;
+    function CallICCardInsertionCheck(const ASamsungPay: Boolean): Boolean; virtual; abstract;
     // 요청 전문 취소
     function CallTransCancel: Boolean; virtual; abstract;
   end;
@@ -270,14 +177,19 @@ type
     function CallCashIC(AInfo: TCardSendInfoDM): TCardRecvInfoDM;
     // 수표조회
     function CallCheck(AInfo: TCardSendInfoDM): TCardRecvInfoDM;
+    // 간편결제 승인
+    function CallAppPay(AInfo: TCardSendInfoDM): TCardRecvInfoDM;
     // 핀패드 입력
     function CallPinPad(ASendAmt: Integer; out ARecvData: AnsiString): Boolean;
     // 카드정보 조회
-    function CallCardInfo(AInfo: TCardSendInfoDM): TCardRecvInfoDM;
+    //function CallCardInfo(AInfo: TCardSendInfoDM): TCardRecvInfoDM;
+    function CallCardInfo: string;
     // 무결성체크
-    function CallICReaderVerify(ATerminalID: string; out ARecvData: AnsiString): Boolean;
+    //function CallICReaderVerify(ATerminalID: string; out ARecvData: AnsiString): Boolean;
+    function CallICReaderVerify: Boolean;
     // 카드 삽입여부 체크
-    function CallICCardInsertionCheck(const ATerminalID: string; const ASamsungPay: Boolean; out ARespCode, ARecvData: AnsiString): Boolean;
+    //function CallICCardInsertionCheck(const ATerminalID: string; const ASamsungPay: Boolean; out ARespCode, ARecvData: AnsiString): Boolean;
+    function CallICCardInsertionCheck(const ASamsungPay: Boolean): Boolean;
     // 요청 전문 취소
     function CallTransCancel: Boolean;
     // 전체 환경 설정 적용 처리
@@ -487,7 +399,7 @@ type
     function CallCheck(AInfo: TCardSendInfoDM): TCardRecvInfoDM; override;
     function CallPinPad(ASendAmt: Integer; out ARecvData: AnsiString): Boolean; override;
   end;
-
+  {
   // KCP
   TVanKcpDaemon = class(TVanDaemon)
   private
@@ -520,7 +432,7 @@ type
 
     property HideLegacyForm: Boolean read FHideLegacyForm write FHideLegacyForm default False;
   end;
-
+  }
   // DAOU
   TVanDaouDaemon = class(TVanDaemon)
   private
@@ -588,7 +500,7 @@ type
 implementation
 
 uses
-  IniFiles, uKisPosAgentForm, uLkJSON;
+  IniFiles, uKisPosAgentForm, uLkJSON, uVanKcpModule;
 
 type
   // KOCESS
@@ -665,55 +577,6 @@ type
   TFDIK_Daemon_Destroy   = function(): Integer;
   TFDIK_Daemon_Term      = Function(): Integer;
 
-const
-  MSG_ERR_DLL_LOAD        = ' 파일을 불러올 수 없습니다.';
-  MSG_ERR_SET_CONFIG_FAIL = '해당 설정은 현재 설정된 밴사에서는 사용할 수 없습니다.' + #13#10 +
-                            '(밴사에서 제공하는 프로그램에서 직접 설정하거나 사용되지 않음)';
-
-  STX              = #2;   // Start of Text
-  ETX              = #3;   // End of Text
-  EOT              = #4;   // End of Transmission
-  ENQ              = #5;   // ENQuiry
-  ACK              = #6;   // ACKnowledge
-  NAK              = #$15; // Negative Acknowledge (#21)
-  FS               = #$1C; // Field Separator (#28)
-  CR               = #13;  // Carriage Return
-  SI               = #15;
-
-  CASH_RCP_AUTO_NUMBER = '0100001234'; // 현금영수증 자진 발급 처리 번호
-
-  // KSNET
-  KSNET_DAEMON_DLL  = 'ksnetcomm.dll';
-  KSNET_SOLBIPOS    = 'SOLB'; // 업체정보
-
-  // JTNET
-  JTNET_DAEMON_DLL  = 'JTPosSeqDmDll.dll';
-
-  // NICE
-  NICE_DAEMON_DLL   = 'NVCAT.dll';
-
-  // KCP
-  LIBKCP_SECURE_DLL = 'libKCPSecure.dll';
-  KCP_VER_INFO      = 'PSOB'; // 솔비포스 운영ID
-
-  // FDIK
-  WIN4POS_DLL       = 'Win4POSDll.dll';
-
-  // Koces
-  filKOCESIC_DLL      = 'KocesICLib.dll';
-  filKOCESIC_DLL_Path = 'C:\Koces\KocesICPos\';
-  MSG_SOLBIPOS        = 'Solbipos POS System';
-
-  // DAOU
-  TERMINAL_GUBUN1   = '4             ';  // 단말기정보(일반)
-  TERMINAL_GUBUN2   = 'Y             ';  // 단말기정보(다중사업자)
-
-  // KOVAN
-  KOVAN_DAEMON_DLL  = 'VPos_Client.dll';
-
-  // SPC
-  SPC_DAEMON_DLL    = 'SpcnVirtualDll.dll';
-
 { TVanDaemon }
 
 constructor TVanDaemon.Create;
@@ -772,7 +635,7 @@ begin
   else if FVanCode = VAN_CODE_KCP then
   begin
     MainVan := TVanKcpDaemon.Create;
-    TVanKcpDaemon(MainVan).HideLegacyForm := HideLegacyForm;
+    //TVanKcpDaemon(MainVan).HideLegacyForm := HideLegacyForm;
   end
   else if FVanCode = VAN_CODE_DAOU then
     MainVan := TVanDaouDaemon.Create
@@ -931,6 +794,33 @@ begin
   FLog.Write(ltEnd, ['수표조회DM', Result.Result, '코드', Result.Code, '메세지', Result.Msg]);
 end;
 
+function TVanDaemonModule.CallAppPay(AInfo: TCardSendInfoDM): TCardRecvInfoDM;
+begin
+  Result.Result := False;
+  FLog.Write(ltBegin, ['간편결제승인', FVanCode, '승인/취소', AInfo.Approval, 'KeyIn', AInfo.KeyInput, '카드번호', AInfo.CardNo,
+                       '거래금액', AInfo.SaleAmt, '봉사료', AInfo.SvcAmt, '부가세', AInfo.VatAmt, '면세금액', AInfo.FreeAmt,
+                       '거래형태', AInfo.TrsType, '원승인번호', AInfo.OrgAgreeNo, '원승인일자', AInfo.OrgAgreeDate,
+                       'TID', AInfo.TerminalID, '사업자', AInfo.BizNo, '서명옵션', AInfo.SignOption, '할부개월', AInfo.HalbuMonth,
+                       '예비1', AInfo.Reserved1, '예비2', AInfo.Reserved2, '예비3', AInfo.Reserved3]);
+  if MainVan = nil then
+  begin
+    Result.Result := False;
+    Result.Msg := 'VAN사가 설정되어 있지 않습니다.';
+    Exit;
+  end;
+  try
+    Result := MainVan.CallAppPay(AInfo);
+  except on E: Exception do
+    begin
+      FLog.Write(ltError, ['간편결제승인', E.Message]);
+      Result.Result := False;
+      Result.Msg := E.Message;
+    end;
+  end;
+  FLog.Write(ltEnd, ['간편결제결과', Result.Result, '코드', Result.Code, '메세지', Result.Msg, '승인금액', Result.AgreeAmt, '승인번호', Result.AgreeNo, '승인일시', Result.AgreeDateTime,
+                     '카드번호', Result.CardNo, '발급사', Result.BalgupsaName, '매입사', Result.CompName]);
+end;
+
 function TVanDaemonModule.CallPinPad(ASendAmt: Integer; out ARecvData: AnsiString): Boolean;
 begin
   Result := False;
@@ -952,18 +842,18 @@ begin
   FLog.Write(ltEnd, ['핀패드DM', ARecvData]);
 end;
 
-function TVanDaemonModule.CallCardInfo(AInfo: TCardSendInfoDM): TCardRecvInfoDM;
+function TVanDaemonModule.CallCardInfo: string;
 begin
   FLog.Write(ltBegin, ['카드정보 조회', FVanCode]);
   if MainVan = nil then
   begin
-    Result.Msg := 'VAN사가 설정되어 있지 않습니다.';
+    //Result.Msg := 'VAN사가 설정되어 있지 않습니다.';
     Exit;
   end;
 
-  Result := MainVan.CallCardInfo(AInfo);
+  Result := MainVan.CallCardInfo;
 end;
-
+{
 function TVanDaemonModule.CallICReaderVerify(ATerminalID: string; out ARecvData: AnsiString): Boolean;
 begin
   Result := False;
@@ -985,7 +875,30 @@ begin
   end;
   FLog.Write(ltError, ['무결성체크', ARecvData]);
 end;
-
+}
+function TVanDaemonModule.CallICReaderVerify: Boolean;
+begin
+  Result := False;
+  FLog.Write(ltBegin, ['무결성체크', FVanCode]);
+  if MainVan = nil then
+  begin
+    Result := False;
+    //ARecvData := 'VAN사가 설정되어 있지 않습니다.';
+    Exit;
+  end;
+  Try
+    Result := MainVan.CallICReaderVerify;
+  except
+    on E: Exception do
+    begin
+      FLog.Write(ltError, ['무결성체크', E.Message]);
+      //ARecvData := E.Message;
+    end;
+  end;
+  //FLog.Write(ltError, ['무결성체크', ARecvData]);
+  FLog.Write(ltError, ['무결성체크', '완료']);
+end;
+{
 function TVanDaemonModule.CallICCardInsertionCheck(const ATerminalID: string; const ASamsungPay: Boolean; out ARespCode, ARecvData: AnsiString): Boolean;
 begin
   Result := False;
@@ -1010,6 +923,34 @@ begin
     end;
   end;
   FLog.Write(ltError, ['IC카드삽입여부체크', ARecvData]);
+end;
+}
+
+function TVanDaemonModule.CallICCardInsertionCheck(const ASamsungPay: Boolean): Boolean;
+begin
+  Result := False;
+  //ARespCode := '';
+  //ARecvData := '';
+  FLog.Write(ltBegin, ['IC카드삽입여부체크', FVanCode]);
+  if (MainVan = nil) then
+  begin
+    Result := False;
+    //ARespCode := '????';
+    //ARecvData := 'VAN사가 설정되어 있지 않습니다.';
+    Exit;
+  end;
+
+  try
+    Result := MainVan.CallICCardInsertionCheck(ASamsungPay);
+  except
+    on E: Exception do
+    begin
+      FLog.Write(ltError, ['IC카드삽입여부체크', E.Message]);
+      //ARecvData := E.Message;
+    end;
+  end;
+  //FLog.Write(ltError, ['IC카드삽입여부체크', ARecvData]);
+  FLog.Write(ltError, ['IC카드삽입여부체크', '완료']);
 end;
 
 function TVanDaemonModule.CallTransCancel: Boolean;
@@ -3786,7 +3727,7 @@ begin
 end;
 
 { TVanKcpDaemon }
-
+(*
 constructor TVanKcpDaemon.Create;
 begin
   inherited;
@@ -4287,6 +4228,7 @@ begin
     Result.Code := Trim(RecvData);
   end;
 end;
+*)
 
 { TVanDaouDaemon }
 

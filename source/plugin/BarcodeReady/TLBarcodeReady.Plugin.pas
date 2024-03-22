@@ -215,13 +215,14 @@ try again.
         lblBarcodeNotice2.Caption := '';
         lblBarcodeNotice3.Font.Size := 13;
         lblBarcodeNotice3.Caption := 'If you are unable to scan the barcode scan,' + _CRLF +
-          'make sure to adjust your screen brightness to the maximum and' + _CRLF +
-          'try again.';
+          'make sure to adjust your screen brightness' + _CRLF +
+          'to the maximum and try again.';
         btnClose.Caption := 'Close';
       end;
     TKioskLocale.klJapanese:
       begin
-        lblFormTitle.Caption := 'ポップアップタイトル：バーコードで照会する';
+        //lblFormTitle.Caption := 'ポップアップタイトル：バーコードで照会する';
+        lblFormTitle.Caption := 'バーコードで照会する';
         lblBarcodeNotice1.Font.Size := 13;
         lblBarcodeNotice1.Caption := '予約詳細画面又は携帯電話に送られたバーコードを' + _CRLF +
           '右下のバーコードスキャナーでお読み取りください。' + _CRLF +
@@ -234,7 +235,8 @@ try again.
       end;
     TKioskLocale.klChinese:
       begin
-        lblFormTitle.Caption := '弹出标题：条形码查询';
+        //lblFormTitle.Caption := '弹出标题：条形码查询';
+        lblFormTitle.Caption := '条形码查询';
         lblBarcodeNotice1.Font.Size := 13;
         lblBarcodeNotice1.Caption := '请利用右下方条形码扫描机扫描预购详细明细或发送到手机上的条形码。' + _CRLF +
           '若使用手机号码或预购号码查询，请点击[关闭]按键。';

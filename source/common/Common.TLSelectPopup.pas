@@ -177,22 +177,26 @@ begin
   for var I := 1 to LCN_MAX_BUTTONS do
     FSelectButtons[I].Caption.Text := Format('%d', [I * FBuyDoubleCount, FTicketUnit]); //매
 
-  FPerMinCount := (Global.DenominList[FDenominIndex].PerMinCount * FBuyDoubleCount);
+  //FPerMinCount := (Global.DenominList[FDenominIndex].PerMinCount * FBuyDoubleCount);
+  FPerMinCount := Global.DenominList[FDenominIndex].PerMinCount;
   FPerMaxCount := Global.DenominList[FDenominIndex].PerMaxCount;
   FRoundMaxCount := Global.DenominList[FDenominIndex].RoundMaxCount;
   FPerPersonMaxCount := Global.DenominList[FDenominIndex].PerPersonMaxCount;
   FDenominLimitCount := Global.DenominList[FDenominIndex].DenominLimitCount;
 
-  lblSelectName.Caption := Global.DenominList[FDenominIndex].DenominName;
+  lblSelectName.Caption := GetTextLocale([Global.DenominList[FDenominIndex].DenominName, Global.DenominList[FDenominIndex].DenominNameEN]);
   lblSelectPrice.Caption := FormatFloat('#,##0 ', Global.DenominList[FDenominIndex].SalePrice) + FCurrencySymbol;
   with lblSelectDescription do
   begin
     AutoSize := False;
     WordWrap := False;
-    Caption := Global.DenominList[FDenominIndex].DenominDescription;
+    Caption := GetTextLocale([Global.DenominList[FDenominIndex].DenominDescription, Global.DenominList[FDenominIndex].DenominDescriptionEN]);
     WordWrap := True;
     AutoSize := True;
-    Visible := (not Global.DenominList[FDenominIndex].DenominDescription.IsEmpty);
+    if (Global.KioskLocale = TKioskLocale.klKorean) then
+      Visible := (not Global.DenominList[FDenominIndex].DenominDescription.IsEmpty)
+    else
+      Visible := (not Global.DenominList[FDenominIndex].DenominDescriptionEN.IsEmpty);
   end;
   SetMinMaxCount;
 end;
@@ -206,154 +210,347 @@ procedure TSelectPopupForm.SetMinMaxCount;
 var
   LCount: Integer;
   LAlert: string;
+  LMax, LMin: Integer;
 begin
   LAlert := '';
+
+  {
+  PerMaxCount: Integer         // 예매건당 최대매수
+  PerMinCount: Integer         // 예매건당 최저매수
+  ProductSaleCount: Integer    // 판매가능 매수
+  ScheduleSaleCount: Integer   // 회차당 판매가능 매수
+  PerPersonMaxCount: Integer   // 인당최대매수
+  RoundMaxCount: Integer       // 회차당 최대매수
+  BuyDoubleCount: Integer      // 매수배수
+  DenominLimitCount: Integer   // 권종 판매가능매수
+  ScheduleRemainCount: Integer // 해당스케줄 판매가능매수
+  }
+
+  LMax := 10;   //최대
+  LMin := 1;    //최소
+
+  // 예매건당 최저매수
+  if LMin < FPerMinCount then
+    LMin := FPerMinCount;
+
+  // 예매건당 최대매
+  if (LMax > FPerMaxCount) then
+    LMax := FPerMaxCount;
+  // 판매가능 매수
+  //if (LMax > Global.DenominList[ADenonimIndex].ProductSaleCount) then
+    //LMax := Global.DenominList[ADenonimIndex].ProductSaleCount;
+  // 회차당 판매가능 매수
+  //if (LMax > Global.DenominList[ADenonimIndex].ScheduleSaleCount) then
+    //LMax := Global.DenominList[ADenonimIndex].ScheduleSaleCount;
+  // 인당 최대 매수
+  if (LMax > FPerPersonMaxCount) then
+    LMax := FPerPersonMaxCount;
+  // 회차당 최대매수
+  if (LMax > FRoundMaxCount) then
+    LMax := FRoundMaxCount;
+  // 권종 판매가능매수
+  if (LMax > FDenominLimitCount) then
+    LMax := FDenominLimitCount;
+
+  case Global.KioskLocale of
+    TKioskLocale.klKorean:
+      begin
+        if (FBuyDoubleCount > 1) then
+        begin
+          if (LMin > 1) then  //A매부터 C매 단위로 최대 B매까지 선택 가능합니다.
+          begin
+            LAlert := Format('<FONT color="%s">%d매</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), LMin]) + ' 부터 ' +  // A
+                      Format('<FONT color="%s">%d매</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + ' 단위로 최대 ' + // C
+                      Format('<FONT color="%s">%d매</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), LMax]) + '까지 선택 가능합니다.'; // B
+          end
+          else
+          begin
+            LAlert := Format('<FONT color="%s">%d매</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + ' 단위로 최대 ' +
+                      Format('<FONT color="%s">%d매</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), LMax]) + '까지 선택 가능합니다.';
+          end;
+        end
+        else
+        begin
+          if (LMin > 1) then
+          begin
+            if (LMax < 10) then
+              LAlert := Format('<FONT color="%s">%d매부터 %d매까지 </FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), LMin, LMax]) + '선택 가능합니다.'
+            else
+              LAlert := Format('<FONT color="%s">%d매부터 </FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), LMin]) + '선택 가능합니다.';
+          end
+          else
+          begin
+            LAlert := Format('<FONT color="%s">최대 %d매</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), LMax]) + '까지 선택 가능합니다.';
+          end;
+        end;
+
+        LimitAlert := LAlert;
+      end;
+    TKioskLocale.klEnglish:
+      begin
+        if (FBuyDoubleCount > 1) then
+        begin
+          if (LMin > 1) then //You may select up to B tickets (min A) with increments of C tickets.
+          begin
+            LAlert := 'You may select up to '+ Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), LMax]) +
+                      ' tickets (min ' + Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), LMin]) +
+                      ') with increments of ' + Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + ' tickets.';
+          end
+          else
+          begin
+            LAlert := 'You may select up to ' + Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), LMax]) +
+                      ' tickets with increments of ' + Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + ' tickets.';
+          end;
+        end
+        else
+        begin
+          if (LMin > 1) then
+          begin
+            if (LMax < 10) then
+              LAlert := 'You may select ' + Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), LMin]) + ' or more tickets.'
+            else
+              LAlert := 'You may select ' + Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), LMin]) + ' or more tickets.';
+          end
+          else
+          begin
+            LAlert := Format('<FONT color="%s">Up to %d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), LMax]) + ' tickets can be selected.';
+          end;
+        end;
+
+        LimitAlert := LAlert;
+      end;
+    TKioskLocale.klJapanese:
+      begin
+        if (FBuyDoubleCount > 1) then
+        begin
+          if (LMin > 1) then  // A枚からC枚単位で最大B枚まで選択できます。
+          begin
+            LAlert := Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), LMin]) + '枚から' +
+                      Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + '枚単位で最大' +
+                      Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), LMax]) + '枚まで選択できます。';
+          end
+          else
+          begin
+            LAlert := Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + '枚単位で最大' +
+                      Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), LMax]) +'枚まで選択できます。';
+          end;
+        end
+        else
+        begin
+          if (LMin > 1) then
+          begin
+            if (LMax < 10) then
+              LAlert := '該当券種は、' + Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), LMin]) + '枚から選択できます。'
+            else
+              LAlert := '該当券種は、' + Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), LMin]) + '枚から選択できます。';
+          end
+          else
+          begin
+            LAlert := '該当する券種は、' + Format('<FONT color="%s">最大%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), LMax]) + '枚まで選択できます。';
+          end;
+        end;
+
+        LimitAlert := LAlert;
+      end;
+    TKioskLocale.klChinese:
+      begin
+        if (FBuyDoubleCount > 1) then
+        begin
+          if (LMin > 1) then // 从A张到以C张为增量，最多可选择B张。
+          begin
+            LAlert := '从' + Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), LMin]) + '张到以' +
+                      Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + '张为增量，最多可选择' +
+                      Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), LMax]) + '张。';
+          end
+          else
+          begin
+            LAlert := '以' + Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + '张为增量，最多可选择' +
+                             Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), LMax]) + '张。';
+          end;
+        end
+        else
+        begin
+          if (LMin > 1) then
+          begin
+            if (LMax < 10) then
+              LAlert := '相应门票种类，可从' + Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), LMin]) + '张开始选择。'
+            else
+              LAlert := '相应门票种类，可从' + Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), LMin]) + '张开始选择。';
+          end
+          else
+          begin
+            LAlert := '该门票种类最多可选择' + Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), LMax]) + '张。';
+          end;
+        end;
+
+        LimitAlert := LAlert;
+      end;
+  end;
+
+  {
   case Global.KioskLocale of
     TKioskLocale.klKorean:
       begin
         if (FBuyDoubleCount > 1) then
         begin
           if (FSelectedCount > FPerMaxCount) then
-            LAlert := Format('<FONT color="%s">%d매 단위로 최대 %d매까지</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount, FPerMaxCount]);
-          if (FSelectedCount < FPerMinCount) and (FSelectedCount > FPerMaxCount) then
-            LAlert := Format('<FONT color="%s">%d매부터 %d매 단위로 최대 %d매까지</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount, FPerMinCount, FPerMaxCount]);
+            LAlert := Format('<FONT color="%s">%d매</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + ' 단위로 최대 ' +
+                      Format('<FONT color="%s">%d매</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) + '까지 선택 가능합니다.';
+          if (FSelectedCount < FPerMinCount) and (FSelectedCount > FPerMaxCount) then  //A매부터 C매 단위로 최대 B매까지 선택 가능합니다.
+            LAlert := Format('<FONT color="%s">%d매</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMinCount]) + ' 부터 ' +  // A
+                      Format('<FONT color="%s">%d매</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + ' 단위로 최대 ' + // C
+                      Format('<FONT color="%s">%d매</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) + '까지 선택 가능합니다.'; // B
         end;
 
         if LAlert.IsEmpty then
         begin
           if (FSelectedCount > FPerMaxCount) then
-            LAlert := Format('<FONT color="%s">최대 %d매까지</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]);
-          if (FSelectedCount < FPerMinCount) then
-            LAlert := Format('<FONT color="%s">최소 %d매부터</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMinCount]);
+            LAlert := Format('<FONT color="%s">최대 %d매</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) + '까지 선택 가능합니다.';
+          if (FSelectedCount < FPerMinCount) and (FPerMinCount > 1) then
+            LAlert := Format('<FONT color="%s">%d매부터 </FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMinCount]) + '선택 가능합니다.';
           if (FPerPersonMaxCount < 10) then
-            LAlert := Format('<FONT color="%s">최대 %d매까지</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerPersonMaxCount])
+            LAlert := Format('<FONT color="%s">최대 %d매</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerPersonMaxCount]) + '까지 선택 가능합니다.'
           else
           begin
             if (FDenominLimitCount < 10) then
-              LAlert := Format('<FONT color="%s">최대 %d매까지</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FDenominLimitCount])
+              LAlert := Format('<FONT color="%s">최대 %d매</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FDenominLimitCount]) + '까지 선택 가능합니다.'
             else
             begin
               if (FRoundMaxCount < 10) then
-                LAlert := Format('<FONT color="%s">최대 %d매까지</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FRoundMaxCount])
+                LAlert := Format('<FONT color="%s">최대 %d매</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FRoundMaxCount]) + '까지 선택 가능합니다.'
               else if (FPerMaxCount < 10) then
-                LAlert := Format('<FONT color="%s">최대 %d매까지</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount])
+                LAlert := Format('<FONT color="%s">최대 %d매</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) + '까지 선택 가능합니다.';
             end;
           end;
         end;
 
         if LAlert.IsEmpty then
-          LAlert := Format('<FONT color="%s">최대 10매까지</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary)]);
-        LimitAlert := LAlert + ' 선택 가능합니다.';
+          LAlert := Format('<FONT color="%s">최대 10매</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary)]) + '까지 선택 가능합니다.';
+
+        LimitAlert := LAlert;
       end;
     TKioskLocale.klEnglish:
       begin
         if (FBuyDoubleCount > 1) then
         begin
           if (FSelectedCount > FPerMaxCount) then
-            LAlert := Format('<FONT color="%s">up to %d tickets with increments of %d tickets.</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount, FBuyDoubleCount]);
-          if (FSelectedCount < FPerMinCount) and (FSelectedCount > FPerMaxCount) then
-            LAlert := Format('<FONT color="%s">up to %d tickets (min %d) with increments of %d tickets.</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount, FBuyDoubleCount, FPerMinCount]);
+            LAlert := 'You may select up to ' + Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) +
+                      ' tickets with increments of ' + Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + ' tickets.';
+
+          if (FSelectedCount < FPerMinCount) and (FSelectedCount > FPerMaxCount) then //You may select up to B tickets (min A) with increments of C tickets.
+            LAlert := 'You may select up to '+ Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) +
+                      ' tickets (min ' + Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMinCount]) +
+                      ') with increments of ' + Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + ' tickets.';
         end;
 
         if LAlert.IsEmpty then
         begin
           if (FSelectedCount > FPerMaxCount) then
-            LAlert := Format('<FONT color="%s">Up to %d tickets.</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]);
+            LAlert := Format('<FONT color="%s">Up to %d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) + ' tickets can be selected.';
           if (FSelectedCount < FPerMinCount) then
-            LAlert := Format('<FONT color="%s">최소 %d매부터</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMinCount]);
+            LAlert := 'You may select ' + Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMinCount]) + ' or more tickets.';
           if (FPerPersonMaxCount < 10) then
-            LAlert := Format('<FONT color="%s">Up to %d tickets.</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerPersonMaxCount])
+            LAlert := Format('<FONT color="%s">Up to %d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerPersonMaxCount]) + ' tickets can be selected.'
           else
           begin
             if (FDenominLimitCount < 10) then
-              LAlert := Format('<FONT color="%s">Up to %d tickets.</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FDenominLimitCount])
+              LAlert := Format('<FONT color="%s">Up to %d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FDenominLimitCount]) + ' tickets can be selected.'
             else
             begin
               if (FRoundMaxCount < 10) then
-                LAlert := Format('<FONT color="%s">Up to %d tickets.</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FRoundMaxCount])
+                LAlert := Format('<FONT color="%s">Up to %d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FRoundMaxCount]) + ' tickets can be selected.'
               else if (FPerMaxCount < 10) then
-                LAlert := Format('<FONT color="%s">Up to %d tickets.</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount])
+                LAlert := Format('<FONT color="%s">Up to %d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) + ' tickets can be selected.';
             end;
           end;
         end;
 
         if LAlert.IsEmpty then
-          LAlert := Format('<FONT color="%s">Up to 10 tickets.</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary)]);
-        LimitAlert := 'You may select ' + LAlert;
+          LAlert := Format('<FONT color="%s">Up to 10</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary)]) + ' tickets can be selected.';
+
+        LimitAlert := LAlert;
       end;
     TKioskLocale.klJapanese:
       begin
         if (FBuyDoubleCount > 1) then
         begin
           if (FSelectedCount > FPerMaxCount) then
-            LAlert := Format('<FONT color="%s">%d 枚単位で最大 %d 枚ま</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount, FPerMaxCount]);
-          if (FSelectedCount < FPerMinCount) and (FSelectedCount > FPerMaxCount) then
-            LAlert := Format('<FONT color="%s">%d 枚から %d 枚単位で最大 %d 枚ま</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount, FPerMinCount, FPerMaxCount]);
+            LAlert := Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + '枚単位で最大' +
+                      Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) +'枚まで選択できます。';
+          if (FSelectedCount < FPerMinCount) and (FSelectedCount > FPerMaxCount) then  // A枚からC枚単位で最大B枚まで選択できます。
+            LAlert := Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMinCount]) + '枚から' +
+                      Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + '枚単位で最大' +
+                      Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) + '枚まで選択できます。';
         end;
 
         if LAlert.IsEmpty then
         begin
           if (FSelectedCount > FPerMaxCount) then
-            LAlert := Format('<FONT color="%s">最大 %d 枚ま</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]);
+            LAlert := '該当する券種は、' + Format('<FONT color="%s">最大%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) + '枚まで選択できます。';
           if (FSelectedCount < FPerMinCount) then
-            LAlert := Format('<FONT color="%s">최소 %d매부터</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMinCount]);
+            LAlert := '該当券種は、' + Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMinCount]) + '枚から選択できます。';
           if (FPerPersonMaxCount < 10) then
-            LAlert := Format('<FONT color="%s">最大 %d 枚ま</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerPersonMaxCount])
+            LAlert := '該当する券種は、' + Format('<FONT color="%s">最大%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerPersonMaxCount]) + '枚まで選択できます。'
           else
           begin
             if (FDenominLimitCount < 10) then
-              LAlert := Format('<FONT color="%s">最大 %d 枚ま</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FDenominLimitCount])
+              LAlert := '該当する券種は、' + Format('<FONT color="%s">最大%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FDenominLimitCount]) + '枚まで選択できます。'
             else
             begin
               if (FRoundMaxCount < 10) then
-                LAlert := Format('<FONT color="%s">最大 %d 枚ま</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FRoundMaxCount])
+                LAlert := '該当する券種は、' + Format('<FONT color="%s">最大%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FRoundMaxCount]) + '枚まで選択できます。'
               else if (FPerMaxCount < 10) then
-                LAlert := Format('<FONT color="%s">最大 %d 枚ま</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount])
+                LAlert := '該当する券種は、' + Format('<FONT color="%s">最大%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) + '枚まで選択できます。';
             end;
           end;
         end;
 
         if LAlert.IsEmpty then
-          LAlert := Format('<FONT color="%s">最大 10 枚ま</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary)]);
-        LimitAlert := LAlert + ' で選択できます。';
+          LAlert := '該当する券種は、' + Format('<FONT color="%s">最大10</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary)]) + '枚まで選択できます。';
+
+        LimitAlert := LAlert;
       end;
     TKioskLocale.klChinese:
       begin
         if (FBuyDoubleCount > 1) then
         begin
           if (FSelectedCount > FPerMaxCount) then
-            LAlert := Format('<FONT color="%s">以 %d 张为增量，最多可选择 %d 张。</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount, FPerMaxCount]);
-          if (FSelectedCount < FPerMinCount) and (FSelectedCount > FPerMaxCount) then
-            LAlert := Format('<FONT color="%s">从 %d 张到以 %d 张为增量，最多可选择 %d 张。</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount, FPerMinCount, FPerMaxCount]);
+            LAlert := '以' + Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + '张为增量，最多可选择' +
+                             Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) + '张。';
+          if (FSelectedCount < FPerMinCount) and (FSelectedCount > FPerMaxCount) then // 从A张到以C张为增量，最多可选择B张。
+            LAlert := '从' + Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMinCount]) + '张到以' +
+                      Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + '张为增量，最多可选择' +
+                      Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) + '张。';
         end;
 
         if LAlert.IsEmpty then
         begin
           if (FSelectedCount > FPerMaxCount) then
-            LAlert := Format('<FONT color="%s">最多可选择 %d 张。</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]);
+            LAlert := '该门票种类最多可选择' + Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) + '张。';
           if (FSelectedCount < FPerMinCount) then
-            LAlert := Format('<FONT color="%s">최소 %d매부터</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMinCount]);
+            LAlert := '相应门票种类，可从' + Format('<FONT color="%s">%d</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMinCount]) + '张开始选择。';
           if (FPerPersonMaxCount < 10) then
-            LAlert := Format('<FONT color="%s">最多可选择 %d 张。</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerPersonMaxCount])
+            LAlert := '该门票种类最多可选择' + Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerPersonMaxCount]) + '张。'
           else
           begin
             if (FDenominLimitCount < 10) then
-              LAlert := Format('<FONT color="%s">最多可选择 %d 张。</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FDenominLimitCount])
+              LAlert := '该门票种类最多可选择' + Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FDenominLimitCount]) + '张。'
             else
             begin
               if (FRoundMaxCount < 10) then
-                LAlert := Format('<FONT color="%s">最多可选择 %d 张。</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FRoundMaxCount])
+                LAlert := '该门票种类最多可选择' + Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FRoundMaxCount]) + '张。'
               else if (FPerMaxCount < 10) then
-                LAlert := Format('<FONT color="%s">最多可选择 %d 张。</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount])
+                LAlert := '该门票种类最多可选择' + Format('<FONT color="%s">%d</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) + '张。';
             end;
           end;
         end;
 
         if LAlert.IsEmpty then
-          LAlert := Format('<FONT color="%s">最多可选择 10 张。</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary)]);
+          LAlert := '该门票种类最多可选择' + Format('<FONT color="%s">10</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary)]) + '张。';
         LimitAlert := LAlert;
       end;
   end;
+  }
 
   for var I: ShortInt := 1 to LCN_MAX_BUTTONS do
   begin

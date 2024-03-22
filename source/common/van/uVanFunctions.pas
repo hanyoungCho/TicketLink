@@ -9,6 +9,8 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Controls, Forms, StrUtils, ComObj, Math, TlHelp32;
 
+  // 널문자 전까지만 복사
+  function CopyUntilNull(const AData: AnsiString): AnsiString;
   // 문자열 길이 할당 및 초기화
   procedure SetLenAndFill(var AStr: AnsiString; ALen: Integer);
   // 해당 문자열 길이만큼 3회 덮어 쓰기하여 지운다.
@@ -68,6 +70,21 @@ implementation
 
 uses
   IniFiles;
+
+// NULL 문자 전까지만 복사
+function CopyUntilNull(const AData: AnsiString): AnsiString;
+var
+  I: Integer;
+begin
+  Result := '';
+  for I := 1 to Length(AData) do
+  begin
+    if AData[I] = #0 then
+      Exit;
+
+    Result := Result + AData[I];
+  end;
+end;
 
 procedure SetLenAndFill(var AStr: AnsiString; ALen: Integer);
 begin

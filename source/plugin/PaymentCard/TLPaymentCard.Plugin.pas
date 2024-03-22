@@ -62,6 +62,7 @@ uses
   System.DateUtils,
   { VAN Module }
   uVanDaemonModule,
+  //uVanKcpModul,
   { Project }
   Common.TLGlobal, Common.TLDM, Common.TLCommonLib, Common.TLLayerForm, Common.TLMsgBox;
 
@@ -281,7 +282,8 @@ begin
     lblFormTitle.Font.Color := Colors.black;
     lblRemainTime.Color := Colors.background1;
     lblMessage1.Color := Colors.background1;
-    lblMessage1.Font.Color := Colors.type4;
+    //lblMessage1.Font.Color := Colors.type4;
+    lblMessage1.Font.Color := Colors.black;
     lblMessage2.Color := Colors.background1;
     lblMessage2.Font.Color := Colors.black;
     StreamToPicture(imgPaymentCard.Picture, Images.ani_creditcard_input.Stream);

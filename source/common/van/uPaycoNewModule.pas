@@ -136,7 +136,7 @@ var
 implementation
 
 uses
-  uPaycoRevForm;
+  uPaycoRevForm, uVanTypes;
 
 type
 //1.√ ±‚»≠

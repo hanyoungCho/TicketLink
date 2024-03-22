@@ -430,7 +430,7 @@ begin
         GetTextLocale(['유효하지 않은 바코드 입니다.', 'Invalid barcode.', '無効なバーコードです。', '条形码失效。']),
         GetTextLocale(['예매상세내역 또는 문자로 전송된 바코드만 사용 가능합니다.' + _CRLF + '스마트티켓은 출력없이 바로 입장하세요.',
                        'Only barcodes sent by mobile SMS or those on the reservation page can be used.' + _CRLF + 'Show smart-ticket to enter without printing.',
-                       '予約詳細または携帯電話にSMS送信されたバーコードのみ使用できます。' + _CRLF + 'スマートチケットは出力せずにそのまま入場してください。',
+                       '予約詳細または携帯電話にSMS送信されたバーコードの' + _CRLF + 'み使用できます。' + _CRLF + 'スマートチケットは出力せずにその' + _CRLF + 'まま入場してください。',
                        '只能使用预订详细明细或发送至手机短信的的条形码。' + _CRLF + '电子票无需打印，即可入场。']),
         [GetTextLocale(['확인', 'Confirm', '確認', '确认'])], 5);
     end
@@ -552,7 +552,8 @@ begin
     MakeReserveList(SCH_PHONE_NO, LPhoneNo, LBirthDay)
   else
     ShowMsgBoxError(LErrMsg,
-      GetTextLocale(['확인 후 다시 시도하여 주십시오.', 'Please check before trying again.', '確認してからもう一度お試しください。', '请在确认后，重新试一次。']),
+      //GetTextLocale(['확인 후 다시 시도하여 주십시오.', 'Please check again.', '確認してからもう一度お試しください。', '请在确认后，重新试一次。']),
+      GetTextLocale(['확인 후 다시 시도하여 주십시오.', 'Please check again.', '', '请在确认后，重新试一次。']),
       [GetTextLocale(['확인', 'Confirm', '確認', '确认'])], 5);
 end;
 
@@ -572,7 +573,8 @@ begin
     MakeReserveList(SCH_RESERVED_NO, LReservedNo, LBirthDay)
   else
     ShowMsgBoxError(LErrMsg,
-      GetTextLocale(['확인 후 다시 시도하여 주십시오.', 'Please check before trying again.', '確認してからもう一度お試しください。', '请在确认后，重新试一次。']),
+      //GetTextLocale(['확인 후 다시 시도하여 주십시오.', 'Please check again.', '確認してからもう一度お試しください。', '请在确认后，重新试一次。']),
+      GetTextLocale(['확인 후 다시 시도하여 주십시오.', 'Please check again.', '', '请在确认后，重新试一次。']),
       [GetTextLocale(['확인', 'Confirm', '確認', '确认'])], 5);
 end;
 
@@ -963,6 +965,7 @@ begin
           RI.ExternalServiceType := FieldByName('external_service_type').AsString;
           RI.ExternalServiceTypeName := FieldByName('external_service_type_name').AsString;
           RI.IsDenominationDescriptionExposure := FieldByName('is_denomination_description_exposure').AsBoolean;
+          {
           SL.Text := FieldByName('denomination_description_list').AsString;
           for var I: ShortInt := 0 to Pred(SL.Count) do
           begin
@@ -970,6 +973,10 @@ begin
             if not LMsgText.IsEmpty then
               RI.DenominationDescriptionList.Add(LMsgText);
           end;
+          }
+          RI.DenominationDescription := FieldByName('denomination_description').AsString;
+          RI.DenominationDescriptionEng := FieldByName('denomination_description_eng').AsString;
+
           for var I: ShortInt := 0 to Pred(Length(LTicketNoList)) do
             RI.TicketNoList.Add(LTicketNoList[I]);
           RI.ProductImage.Picture.LoadFromStream(MS);
@@ -1003,8 +1010,16 @@ begin
     on E: Exception do
       if LNoDataMode then
       begin
-        ShowMsgBoxError(LNoDataMsg, GetTextLocale(['매표소에 문의하여 주시기 바랍니다.', 'Please visit the ticket office. ', 'チケット売り場にお問い合わせください。', '请与售票处咨询。']),
-          [GetTextLocale(['확인', 'Confirm', '確認', '确认'])], 5);
+        // qa_v0.3_20240216 - 6 page
+        //ShowMsgBoxError(LNoDataMsg, GetTextLocale(['매표소에 문의하여 주시기 바랍니다.', 'Please visit the ticket office. ', 'チケット売り場にお問い合わせください。', '请与售票处咨询。']),
+        ShowMsgBoxError(LNoDataMsg,
+                        //GetTextLocale(['매표소에 문의하여 주시기 바랍니다.', 'Please check again.', 'もう一度確認してください。', '请与售票处咨询。']),
+                        GetTextLocale(['예매상세내역 또는 문자로 전송된 바코드만 사용 가능합니다.' + _CRLF + '스마트티켓은 출력없이 바로 입장하세요.',
+                                       'Only barcodes sent by mobile SMS or those on the reservation page can be used.' + _CRLF + 'Show smart-ticket to enter without printing.',
+                                       '予約詳細または携帯電話にSMS送信されたバーコードの' + _CRLF + 'み使用できます。' + _CRLF + 'スマートチケットは出力せずにその' + _CRLF + 'まま入場してください。',
+                                       '只能使用预订详细明细或发送至手机短信的的条形码。' + _CRLF + '电子票无需打印，即可入场。']),
+                        [GetTextLocale(['확인', 'Confirm', '確認', '确认'])],
+                        5);
         Global.KioskMode := KSM_TICKETING_HOME;
       end
       else
@@ -1081,15 +1096,20 @@ begin
   try
     Global.PrintingProgress := True;
     try
-{$IFDEF RELEASE}
+      { chy test - 프린터
       if (Global.TicketPrinter.Enabled and (not Global.TicketPrinter.Active)) or
          ((not Global.ReceiptPrinter.Enabled) or (not Global.ReceiptPrinter.Active)) then
+      }
+
+      if (not Global.ReceiptPrinter.Enabled) or (not Global.ReceiptPrinter.Active) then
         raise Exception.Create('티켓/영수증 프린터 사용 불가.');
-{$ENDIF}
+
       //예매동의 문구 표시 설정이 되어 있을 경우 예매동의 문구 노출
       //15초간 대기 중 확인 버튼을 누르지 않으면 발권 취소
       //2023.04.03 김철우 과장 요청
       if Global.ReserveList[AItemIndex].IsDenominationDescriptionExposure then
+      begin
+        {
         for var I: ShortInt := 0 to Pred(Global.ReserveList[AItemIndex].DenominationDescriptionList.Count) do
         begin
           LMsgText := StringReplace(Global.ReserveList[AItemIndex].DenominationDescriptionList[I], '\n', _CRLF, [rfReplaceAll, rfIgnoreCase]);
@@ -1097,6 +1117,14 @@ begin
              (ShowMsgBoxConfirm(LMsgText, '', [GetTextLocale(['확인', 'Confirm', '確認', '确认']), GetTextLocale(['취소', 'Back', 'キャンセル', '取消'])], 15) <> mrOK) then
             Exit;
         end;
+        }
+
+        LMsgText := GetTextLocale([Global.ReserveList[AItemIndex].DenominationDescription, Global.ReserveList[AItemIndex].DenominationDescriptionEng]);
+        if (not LMsgText.IsEmpty) and
+           (ShowMsgBoxConfirm(LMsgText, '', [GetTextLocale(['확인', 'Confirm', '確認', '确认']), GetTextLocale(['취소', 'Back', 'キャンセル', '取消'])], 15) <> mrOK) then
+          Exit;
+
+      end;
 
       if not DM.GetTicketList(Global.ReserveList[AItemIndex].ReserveNo, LTicketCount, LErrMsg) then
         raise Exception.Create(LErrMsg);
@@ -1116,12 +1144,21 @@ begin
   except
     on E: Exception do
     begin
+      {
       ShowMsgBoxError(
         GetTextLocale(['티켓을 출력할 수 없습니다.' + _CRLF + '매표소로 문의하여 주시기 바랍니다.',
                        'Unable to print tickets.' + _CRLF + 'Please visit the ticket office.',
                        'チケットを出力できません。' + _CRLF + 'チケット売り場にお問い合わせください。',
                        '无法出票。' + _CRLF + '请与售票处咨询。']),
         E.Message, [GetTextLocale(['확인', 'Confirm', '確認', '确认'])], 5);
+      }
+      ShowMsgBoxError(
+        GetTextLocale(['해당 예매건은 증빙서류 확인이 필요합니다.' + _CRLF + '매표소를 이용해주시기 바랍니다.',
+                       'Please visit the ticket office' + _CRLF + 'as this reservation requires documentation.',
+                       '該当の予約商品は、証明書類の確認が必要です。' + _CRLF + 'チケット売り場をご利用ください。',
+                       '该预购需要确认证件。' + _CRLF + '请前往售票处。']),
+        '', [GetTextLocale(['확인', 'Confirm', '確認', '确认'])], 5);
+
       AddLog(Format('Ticketing.DoPrintTicket.Exception = %s', [E.Message]));
     end;
   end;
@@ -1303,7 +1340,7 @@ begin
           lblMemberNotice.Height := 32;
           lblMemberNotice.Caption := '예매내역을 확인하신 후 티켓을 출력해 주시기 바랍니다.';
           lblBodyMainStartNotice.Caption := '외국인 전용 티켓링크 사이트를 통해 예매한 티켓은 키오스크 발권이 불가합니다.' + _CRLF +
-          '티켓정보 확인을 위해 매표소를 이용해주시기 바랍니다.';
+                                            '티켓정보 확인을 위해 매표소를 이용해주시기 바랍니다.';
         end;
       TKioskLocale.klEnglish:
         begin
@@ -1322,13 +1359,13 @@ begin
           btnInputPhoneNoConfirm.Caption := 'Continue';
           btnInputReservedNoConfirm.Caption := 'Continue';
 
-          lblReserveUserNameTrail.Caption := ' Here are your reservation details.';
+          lblReserveUserNameTrail.Caption := 'Here are your reservation details.';
           btnTicketingHome.Caption := 'Check again';
-          lblMemberNotice.Top := 42;
-          lblMemberNotice.Height := 96;
+          lblMemberNotice.Top := 100; //42
+          lblMemberNotice.Height := 32; //96
           lblMemberNotice.Caption := 'Please review the details and print your ticket.';
           lblBodyMainStartNotice.Caption := 'All the tickets reserved through ''foreigner-only Ticketlink website'' CANNOT be printed through the Kiosk.' + _CRLF +
-          ' Please use offline ticket box to access your ticket information.';
+                                            'Please use offline ticket box to access your ticket information.';
         end;
       TKioskLocale.klJapanese:
         begin
@@ -1347,13 +1384,13 @@ begin
           btnInputPhoneNoConfirm.Caption := '確認';
           btnInputReservedNoConfirm.Caption := '確認';
 
-          lblReserveUserNameTrail.Caption := ' 様の予約詳細です。';
-          btnTicketingHome.Caption := 'Check again';
-          lblMemberNotice.Top := 42;
-          lblMemberNotice.Height := 96;
+          lblReserveUserNameTrail.Caption := '様の予約詳細です。';
+          btnTicketingHome.Caption := '再び確かめる';
+          lblMemberNotice.Top := 100;
+          lblMemberNotice.Height := 32;
           lblMemberNotice.Caption := '予約詳細をご確認の上、チケットを出力してください。';
           lblBodyMainStartNotice.Caption := '外国人専用のチケットリンクサイトにて予約したチケットは、キオスク発券ができません。' + _CRLF +
-          'チケット情報を確認するため、チケット売り場をご利用ください。';
+                                            'チケット情報を確認するため、チケット売り場をご利用ください。';
         end;
       TKioskLocale.klChinese:
         begin
@@ -1372,13 +1409,13 @@ begin
           btnInputPhoneNoConfirm.Caption := '确认';
           btnInputReservedNoConfirm.Caption := '确认';
 
-          lblReserveUserNameTrail.Caption := ' 的预购明细。';
-          btnTicketingHome.Caption := 'Check again';
-          lblMemberNotice.Top := 42;
-          lblMemberNotice.Height := 96;
+          lblReserveUserNameTrail.Caption := '的预购明细。';
+          btnTicketingHome.Caption := '再检查一遍';
+          lblMemberNotice.Top := 100;
+          lblMemberNotice.Height := 32;
           lblMemberNotice.Caption := '请确认预购明细无误后打印。';
           lblBodyMainStartNotice.Caption := 'KIOSK暂不支持打印通过外国人专用购票链接网站购买的票。' + _CRLF +
-          '请您前往售票处确认购票信息。';
+                                            '请您前往售票处确认购票信息。';
         end;
     end;
 
@@ -1401,7 +1438,8 @@ begin
     panBodyHeadTitle.AutoSize := True;
     panBodyHeadTitle.Left := (panTopCenter.Width div 2) - (panBodyHeadTitle.Width div 2);
     btnGuideReserveNo.Visible := (Global.KioskLocale = TKioskLocale.klKorean);
-    panUserInfo.Visible := (Global.KioskLocale = TKioskLocale.klKorean);
+    //panUserInfo.Visible := (Global.KioskLocale = TKioskLocale.klKorean);
+    lblReserveUserName.Visible := (Global.KioskLocale <> TKioskLocale.klEnglish);
     DispCurrentTime;
   end;
 end;

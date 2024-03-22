@@ -3,7 +3,7 @@ object ConfigForm: TConfigForm
   Top = 0
   BorderStyle = bsNone
   Caption = 'ConfigForm'
-  ClientHeight = 900
+  ClientHeight = 920
   ClientWidth = 800
   Color = 3155225
   Font.Charset = HANGEUL_CHARSET
@@ -43,13 +43,14 @@ object ConfigForm: TConfigForm
   end
   object panButtonContainer: TPanel
     Left = 0
-    Top = 780
+    Top = 800
     Width = 800
     Height = 120
     Align = alBottom
     BevelOuter = bvNone
     ShowCaption = False
     TabOrder = 1
+    ExplicitTop = 780
     object btnApply: TcxButton
       Tag = 1
       AlignWithMargins = True
@@ -120,7 +121,7 @@ object ConfigForm: TConfigForm
     Left = 20
     Top = 74
     Width = 760
-    Height = 687
+    Height = 707
     ParentBackground = False
     TabOrder = 2
     Properties.ActivePage = tabSystem
@@ -129,7 +130,7 @@ object ConfigForm: TConfigForm
     Properties.TabSlants.Positions = [spRight]
     LookAndFeel.Kind = lfUltraFlat
     LookAndFeel.NativeStyle = False
-    ClientRectBottom = 687
+    ClientRectBottom = 707
     ClientRectRight = 760
     ClientRectTop = 35
     object tabSystem: TcxTabSheet
@@ -143,9 +144,7 @@ object ConfigForm: TConfigForm
       ImageIndex = 0
       ParentColor = False
       ParentFont = False
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
+      ExplicitHeight = 652
       object Label1: TLabel
         Left = 14
         Top = 238
@@ -298,7 +297,7 @@ object ConfigForm: TConfigForm
       object gbxPAYCO: TcxGroupBox
         AlignWithMargins = True
         Left = 10
-        Top = 339
+        Top = 359
         Margins.Left = 10
         Margins.Top = 10
         Margins.Right = 10
@@ -307,6 +306,7 @@ object ConfigForm: TConfigForm
         Caption = '[ PAYCO '#44036#54200#44208#51228' '#49444#51221' ]'
         ParentBackground = False
         TabOrder = 15
+        ExplicitTop = 339
         Height = 303
         Width = 740
         object edtPaycoVanTID: TLabeledEdit
@@ -569,21 +569,39 @@ object ConfigForm: TConfigForm
         State = cbChecked
         TabOrder = 11
       end
+      object edtSiteCode: TLabeledEdit
+        Left = 112
+        Top = 318
+        Width = 160
+        Height = 36
+        CharCase = ecUpperCase
+        Color = clWhite
+        EditLabel.Width = 82
+        EditLabel.Height = 36
+        EditLabel.Caption = 'SITE '#53076#46300' '
+        Font.Charset = HANGEUL_CHARSET
+        Font.Color = clBlack
+        Font.Height = -19
+        Font.Name = 'Noto Sans CJK KR Regular'
+        Font.Style = []
+        LabelPosition = lpLeft
+        ParentFont = False
+        TabOrder = 16
+        Text = ''
+      end
     end
     object tabConfig: TcxTabSheet
       Caption = '  '#54872#44221' '#49444#51221'  '
       Color = clWhite
       ImageIndex = 1
       ParentColor = False
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
+      ExplicitHeight = 652
       object mmoConfig: TMemo
         AlignWithMargins = True
         Left = 10
         Top = 203
         Width = 740
-        Height = 439
+        Height = 459
         Margins.Left = 10
         Margins.Top = 0
         Margins.Right = 10
@@ -599,6 +617,7 @@ object ConfigForm: TConfigForm
         ScrollBars = ssBoth
         TabOrder = 0
         WordWrap = False
+        ExplicitHeight = 439
       end
       object mmoLauncher: TMemo
         AlignWithMargins = True

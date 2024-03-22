@@ -113,6 +113,8 @@ begin
       try
         PM.Command := CPC_INIT;
         PM.AddParams(CPP_OWNER_ID, Self.PluginID);
+        //chy test
+        PM.AddParams(CPP_VALUE, 0);
         if Global.APIServerInfo.Host.IsEmpty or
            Global.APIServerInfo.Token.IsEmpty or
            (PluginManager.OpenModal('TLPrepare.bpl', PM) <> mrOK) then

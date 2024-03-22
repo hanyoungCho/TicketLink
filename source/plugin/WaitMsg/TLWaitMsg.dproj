@@ -3,7 +3,7 @@
         <ProjectGuid>{B30F93D4-4B92-4FAE-AD2A-CC7452BD57B5}</ProjectGuid>
         <MainSource>TLWaitMsg.dpk</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <TargetedPlatforms>1</TargetedPlatforms>
         <AppType>Package</AppType>
         <FrameworkType>VCL</FrameworkType>

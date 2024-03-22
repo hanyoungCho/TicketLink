@@ -3,7 +3,7 @@
         <ProjectGuid>{1A2F8D96-93EB-42C1-AC71-7094C451A0F2}</ProjectGuid>
         <MainSource>TLTicketPrint.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <TargetedPlatforms>1</TargetedPlatforms>
         <AppType>Application</AppType>
         <FrameworkType>VCL</FrameworkType>

@@ -249,7 +249,7 @@ object PluginForm: TPluginForm
       Left = 129
       Top = 48
       Width = 67
-      Height = 18
+      Height = 25
       Cursor = crHandPoint
       Align = alLeft
       AutoSize = True

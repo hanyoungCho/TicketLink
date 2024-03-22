@@ -9,7 +9,8 @@ uses
   { Plugin System }
   uPluginManager, uPluginModule, uPluginMessages,
   { DevExpress }
-  cxGraphics, cxLookAndFeels, cxLookAndFeelPainters, cxButtons, AdvSmoothPanel;
+  cxGraphics, cxLookAndFeels, cxLookAndFeelPainters, cxButtons, AdvSmoothPanel,
+  dxGDIPlusClasses;
 
 {$I ..\..\common\Common.TLGlobal.inc}
 
@@ -18,11 +19,8 @@ type
     panButtonContainer: TPanel;
     panMessage: TPanel;
     lblMessage1: TLabel;
-    lblMessage2: TLabel;
     lblRemainTime: TLabel;
-    lblFormTitle: TLabel;
     tmrRemainTime: TTimer;
-    imgPaymentPaycoPin: TImage;
     panNumPad: TPanel;
     panPaycoPin: TAdvSmoothPanel;
     btnNum1: TcxButton;
@@ -40,6 +38,11 @@ type
     lblPaycoPin: TLabel;
     btnCancel: TcxButton;
     btnOK: TcxButton;
+    Panel1: TPanel;
+    imgWechat: TImage;
+    imgAlipay: TImage;
+    imgPayco: TImage;
+    Image1: TImage;
 
     procedure PluginModuleClose(Sender: TObject; var Action: TCloseAction);
     procedure PluginModuleActivate(Sender: TObject);
@@ -51,6 +54,8 @@ type
     { Private declarations }
     FOwnerID: Integer;
     FWaitTime: Integer;
+    FPaymentAmt: Integer;
+    FPaymentType: string;
     FInputBuffer: string;
     FWorking: Boolean;
 
@@ -82,6 +87,8 @@ var
 { TPluginForm }
 
 constructor TPluginForm.Create(AOwner: TComponent; AMsg: TPluginMessage);
+var
+  nTemp: Integer;
 begin
   inherited Create(AOwner, AMsg);
 
@@ -115,9 +122,22 @@ begin
   if Assigned(AMsg) then
     ProcessMessages(AMsg);
 
-  (imgPaymentPaycoPin.Picture.Graphic as TGIFImage).AnimationSpeed := 100;
-  (imgPaymentPaycoPin.Picture.Graphic as TGIFImage).Animate := True;
-  lblRemainTime.Caption := IntToStr(LCN_WAITING_TIME);
+  //(imgPaymentPaycoPin.Picture.Graphic as TGIFImage).AnimationSpeed := 100;
+  //(imgPaymentPaycoPin.Picture.Graphic as TGIFImage).Animate := True;
+  //lblRemainTime.Caption := IntToStr(LCN_WAITING_TIME);
+  lblRemainTime.Caption := FormatFloat('#,##0', FPaymentAmt);
+
+  nTemp := trunc((580 - (lblRemainTime.Width + 4 + 66)) / 2);
+  Image1.Left := nTemp;
+  lblRemainTime.left := nTemp + 66 + 4;
+
+  if FPaymentType = PMC_PAYCO then
+    imgPayco.Visible := True
+  else if FPaymentType = PMC_ALIPAY then
+    imgAlipay.Visible := True
+  else if FPaymentType = PMC_WECHAT then
+    imgWechat.Visible := True;
+
   tmrRemainTime.Enabled := True;
 end;
 
@@ -128,7 +148,7 @@ end;
 
 procedure TPluginForm.PluginModuleClose(Sender: TObject; var Action: TCloseAction);
 begin
-  (imgPaymentPaycoPin.Picture.Graphic as TGIFImage).Animate := False;
+  //(imgPaymentPaycoPin.Picture.Graphic as TGIFImage).Animate := False;
   LF.Close;
   LF.Free;
   LF := nil;
@@ -148,7 +168,11 @@ end;
 procedure TPluginForm.ProcessMessages(AMsg: TPluginMessage);
 begin
   if (AMsg.Command = CPC_INIT) then
+  begin
     FOwnerID := AMsg.ParamByInteger(CPP_OWNER_ID);
+    FPaymentAmt := AMsg.ParamByInteger(CPP_VALUE); //결제예정금액
+    FPaymentType := AMsg.ParamByString(CPP_TYPE); //결제타입
+  end;
 
   if (AMsg.Command = CPC_APPLY_THEME) then
     ApplyTheme;
@@ -163,7 +187,7 @@ begin
   try
     Enabled := False;
     Inc(FWaitTime);
-    lblRemainTime.Caption := IntToStr(LCN_WAITING_TIME - FWaitTime);
+    //lblRemainTime.Caption := IntToStr(LCN_WAITING_TIME - FWaitTime);
     if (FWaitTime > LCN_WAITING_TIME) then
       ModalResult := mrCancel;
   finally
@@ -188,7 +212,7 @@ begin
   end;
 
   FWaitTime := 0;
-  lblRemainTime.Caption := IntToStr(LCN_WAITING_TIME);
+  //lblRemainTime.Caption := IntToStr(LCN_WAITING_TIME);
   if FInputBuffer.IsEmpty then
   begin
     lblPaycoPin.Font.Color := Global.ThemeInfo.Colors.input_font_disabled;
@@ -226,24 +250,37 @@ begin
   PM := TPluginMessage.Create(nil);
   try
     LLen := Length(FInputBuffer);
-    if (LLen in [20, 21]) and
-       (FInputBuffer.Substring(16, 2) = '95') then
+
+    if FPaymentType = PMC_PAYCO then
+    begin
+      if (LLen in [20, 21]) and
+         (FInputBuffer.Substring(16, 2) = '95') then
+      begin
+        PM.Command := CPC_SEND_BARCODE;
+        PM.AddParams(CPP_VALUE, FInputBuffer);
+        PM.PluginMessageToID(FOwnerID);
+        ModalResult := mrOK;
+      end
+      else
+      begin
+        ShowMsgBoxWarning(GetTextLocale(['잘못된 PAYCO 바코드 번호입니다.',
+                                         'Invalid PAYCO barcode number.',
+                                         'PAYCOのバーコード番号が正しくありません。',
+                                         '所输入条形码号码有误。']),
+                          GetTextLocale(['입력한 바코드 번호를 확인하여 주세요.',
+                                         'Please check the barcode number entered.',
+                                         '入力したバーコード番号を確認してください。',
+                                         '请确认所输入条形码号码。']),
+                          [GetTextLocale(['확인', 'Confirm', '確認', '确认'])], 5);
+      end;
+    end
+    else
     begin
       PM.Command := CPC_SEND_BARCODE;
       PM.AddParams(CPP_VALUE, FInputBuffer);
       PM.PluginMessageToID(FOwnerID);
       ModalResult := mrOK;
-    end
-    else
-      ShowMsgBoxWarning(GetTextLocale(['잘못된 PAYCO 바코드 번호입니다.',
-                                       'Invalid PAYCO barcode number.',
-                                       'PAYCOのバーコード番号が正しくありません。',
-                                       '所输入条形码号码有误。']),
-        GetTextLocale(['입력한 바코드 번호를 확인하여 주세요.',
-                       'Please check the barcode number entered.',
-                       '入力したバーコード番号を確認してください。',
-                       '请确认所输入条形码号码。']),
-        [GetTextLocale(['확인', 'Confirm', '確認', '确认'])], 5);
+    end;
   finally
     FreeAndNil(PM);
     FWorking := False;
@@ -256,15 +293,17 @@ begin
   begin
     Self.Color := Colors.background1;
     panMessage.Color := Colors.background1;
-    lblFormTitle.Color := Colors.background1;
-    lblFormTitle.Font.Color := Colors.black;
+    //lblFormTitle.Color := Colors.background1;
+    //lblFormTitle.Font.Color := Colors.black;
     lblRemainTime.Color := Colors.background1;
-    lblRemainTime.Font.Color := Colors.primary;
+    //lblRemainTime.Font.Color := Colors.primary;
+    lblRemainTime.Font.Color := Colors.black;
     lblMessage1.Color := Colors.background1;
-    lblMessage1.Font.Color := Colors.type4;
-    lblMessage2.Color := Colors.background1;
-    lblMessage2.Font.Color := Colors.black;
-    StreamToPicture(imgPaymentPaycoPin.Picture, Images.ani_payco_pin_input.Stream);
+    //lblMessage1.Font.Color := Colors.type4;
+    lblMessage1.Font.Color := Colors.black;
+    //lblMessage2.Color := Colors.background1;
+    //lblMessage2.Font.Color := Colors.black;
+    //StreamToPicture(imgPaymentPaycoPin.Picture, Images.ani_payco_pin_input.Stream);
     panButtonContainer.Color := Colors.background1;
     panNumPad.Color := Colors.background1;
 
@@ -290,10 +329,10 @@ begin
   case Global.KioskLocale of
     TKioskLocale.klKorean:
       begin
-        lblFormTitle.Caption := 'PAYCO 결제';
-        lblMessage1.Width := 400;
-        lblMessage1.Caption := 'PAYCO 앱의 결제 바코드를';
-        lblMessage2.Caption := ' 숫자로 직접 입력해 주세요.';
+        //lblFormTitle.Caption := 'PAYCO 결제';
+        //lblMessage1.Width := 400;
+        lblMessage1.Caption := '결제 바코드 번호를 직접 입력해주세요.';
+        //lblMessage2.Caption := ' 숫자로 직접 입력해 주세요.';
         lblPaycoPin.Caption := '바코드 번호 입력';
         btnNum10.Caption := '모두' + _CRLF + '지우기';
         btnCancel.Caption := '취소';
@@ -301,10 +340,10 @@ begin
       end;
     TKioskLocale.klEnglish:
       begin
-        lblFormTitle.Caption := 'PAYCO';
-        lblMessage1.Width := 440;
+        //lblFormTitle.Caption := 'PAYCO';
+        //lblMessage1.Width := 440;
         lblMessage1.Caption := 'Please enter the payment barcode';
-        lblMessage2.Caption := ' shown in your PAYCO app.';
+        //lblMessage2.Caption := ' shown in your PAYCO app.';
         lblPaycoPin.Caption := 'Input barcode numbers';
         btnNum10.Caption := 'Clear';
         btnCancel.Caption := 'Back';
@@ -312,10 +351,10 @@ begin
       end;
     TKioskLocale.klJapanese:
       begin
-        lblFormTitle.Caption := 'PAYCO';
-        lblMessage1.Width := 440;
-        lblMessage1.Caption := 'PAYCOアプリの決済バーコードを数';
-        lblMessage2.Caption := ' 字で直接入力してください。';
+        //lblFormTitle.Caption := 'PAYCO';
+        //lblMessage1.Width := 440;
+        lblMessage1.Caption := 'お支払いバーコード番号を直接入力してください。';
+        //lblMessage2.Caption := ' 字で直接入力してください。';
         lblPaycoPin.Caption := 'バーコードを数字で入力する';
         btnNum10.Caption := 'すべて消去';
         btnCancel.Caption := 'キャンセル';
@@ -323,10 +362,10 @@ begin
       end;
     TKioskLocale.klChinese:
       begin
-        lblFormTitle.Caption := 'PAYCO';
-        lblMessage1.Width := 440;
-        lblMessage1.Caption := '请亲自输入';
-        lblMessage2.Caption := ' PAYCO APP上支付条形码数字。';
+        //lblFormTitle.Caption := 'PAYCO';
+        //lblMessage1.Width := 440;
+        lblMessage1.Caption := '请输入付款条形码。';
+        //lblMessage2.Caption := ' PAYCO APP上支付条形码数字。';
         lblPaycoPin.Caption := '输入条形码数字';
         btnNum10.Caption := '全部删除';
         btnCancel.Caption := '取消';

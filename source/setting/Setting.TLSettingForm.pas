@@ -13,6 +13,7 @@ uses
   IdGlobal, IdHTTP, IdSSLOpenSSL, IdURI,
   { VAN Module }
   uVanDaemonModule,
+  //uVanKcpModul,
   { Project }
   Common.TLCipher;
 
@@ -62,6 +63,8 @@ type
     gbxLauncher: TGroupBox;
     Label1: TLabel;
     edtDeployHost: TEdit;
+    lblSiteCd: TLabel;
+    edtSiteCode: TEdit;
     procedure FormCreate(Sender: TObject);
     procedure btnCloseClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -76,6 +79,7 @@ type
     FConfigRegistry: TRegistryIniFile; //시스템 설정 레지스트리
     FLbCipher: TLbCipher; //암,복호화 클래스
     FVanModule: TVanDaemonModule; //VAN모듈
+    //FVanModule: TVanKcpDaemon; //VAN모듈
     FPaycoPosTID: string;
     FPaycoAPIKey: string;
     FPaycoMerchantKey: string;
@@ -121,6 +125,7 @@ begin
   SetDoubleBuffered(Self, True);
 
   FVanModule := TVanDaemonModule.Create;
+  //FVanModule := TVanKcpDaemon.Create;
   FLbCipher := TLbCipher.Create;
   FConfigLauncher := TIniFile.Create(FConfigDir + 'TLLauncher.config');
   FConfigRegistry := TRegistryIniFile.Create(CCC_TICKETLINK_REGISTRY_KEY);
@@ -278,6 +283,7 @@ begin
       edtStoreBizNo.Text := ReadString('StoreInfo', 'StoreBizNo', '');
       ckbUsePG.Checked := ReadBool('StoreInfo', 'UsePG', True);
       edtVANCode.Text := ReadString('StoreInfo', 'VanCode', CCC_KCP_VAN_CD);
+      edtSiteCode.Text := ReadString('StoreInfo', 'SiteCode', '');
       edtVANTID.Text := ReadString('StoreInfo', 'VanTID', '');
 
       edtPaycoVanTID.Text := ReadString('PAYCO', 'VanTID', '');
@@ -314,6 +320,7 @@ begin
       WriteString('StoreInfo', 'StoreBizNo', Trim(edtStoreBizNo.Text));
       WriteBool('StoreInfo', 'UsePG', ckbUsePG.Checked);
       WriteString('StoreInfo', 'VanCode', Trim(edtVanCode.Text));
+      WriteString('StoreInfo', 'SiteCode', Trim(edtSiteCode.Text));
       WriteString('StoreInfo', 'VanTID', Trim(edtVanTID.Text));
 
       WriteString('PAYCO', 'VanTID', Trim(edtPaycoVanTID.Text));
@@ -351,7 +358,8 @@ begin
     try
       FVanModule.VanCode := Trim(edtVanCode.Text);
       FVanModule.ApplyConfigAll;
-      if (not FVanModule.CallICReaderVerify(Trim(edtVanTID.Text), LMsg)) then
+      //if (not FVanModule.CallICReaderVerify(Trim(edtVanTID.Text), LMsg)) then
+      if (not FVanModule.CallICReaderVerify) then
         raise Exception.Create(LMsg);
 
       AddLog('Result.Success');

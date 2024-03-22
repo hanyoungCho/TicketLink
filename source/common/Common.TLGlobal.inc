@@ -112,6 +112,8 @@ const
   { 결제수단 사용 설정 구분 }
   PMC_CARD          = 'CARD'; //신용카드
   PMC_PAYCO         = 'PAYCO'; //PAYCO
+  PMC_ALIPAY        = 'ALIPAY'; //alipay
+  PMC_WECHAT        = 'WECHAT'; //wechatpay
 
   { 영수증 출력 방식 구분 }
   RPT_OPTION        = 'OPTION'; //선택 출력
@@ -208,6 +210,7 @@ const
   { 플러그인 파라메터 }
   CPP_OWNER_ID      = 'CPP_OWNER_ID';
   CPP_VALUE         = 'CPP_VALUE';
+  CPP_TYPE          = 'CPP_TYPE';
   CPP_TOP           = 'CPP_TOP';
   CPP_LEFT          = 'CPP_LEFT';
   CPP_HEIGHT        = 'CPP_HEIGHT';

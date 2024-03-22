@@ -277,7 +277,12 @@ type
     font_size: Integer;
     rotate_code: Integer;
     bold: Boolean;
+    editable_component_type: String; //표시될 값의 데이터형식
     text_content: String;
+    ticket_size_type: String; //티켓 사이즈
+    //ticketNo": false,
+    editable_component_type_barcode: Boolean;
+    editable_component_type_qrcode: Boolean;
   end;
 
   { 메인 폼 }
@@ -295,6 +300,7 @@ type
     Button3: TButton;
     Button4: TButton;
     Button5: TButton;
+    Memo1: TMemo;
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
@@ -453,9 +459,16 @@ end;
 procedure TTLSettingForm.Button4Click(Sender: TObject);
 var
   sList: Tstringlist;
+  FHomeDir: String;
 begin
   sList := Tstringlist.Create;
-  sList.LoadFromFile('D:\Works\TicketLink\build\GetTicketTemplateList.Response.json', TEncoding.UTF8);
+
+  FHomeDir := IncludeTrailingPathDelimiter(ExtractFilePath(ParamStr(0)));
+  sList.LoadFromFile(FHomeDir +'\GetTicketTemplateList.Response.json', TEncoding.UTF8);
+  //sList.LoadFromFile('D:\Works\TicketLink\build\test.txt', TEncoding.UTF8);
+  //sList.LoadFromFile('D:\Works\TicketLink\build\test_세로.txt', TEncoding.UTF8);
+  //sList.LoadFromFile('D:\Works\TicketLink\build\가로_180.txt', TEncoding.UTF8);
+  //sList.LoadFromFile('D:\Works\TicketLink\build\세로_180.txt', TEncoding.UTF8);
   mmoLog.Text := sList.Text;
   slist.Free;
 end;
@@ -483,7 +496,8 @@ begin
 
       begin
         LRespJson := '';
-        LRespJson := mmoLog.Text;
+        LRespJson := StringReplace(mmoLog.Text, ''#$D#$A'', '', [rfReplaceAll]);
+        //LRespJson := mmoLog.Text;
 
         if not CkJsonObject_Load(JO, PWideChar(LRespJSON)) then
           raise Exception.Create(CkJsonObject__lastErrorText(JO));
@@ -550,7 +564,11 @@ begin
           rTicketLabelRec[I].font_size := CkJsonObject_IntOf(JOItem, 'fontSize');
           rTicketLabelRec[I].rotate_code := CkJsonObject_IntOf(JOItem, 'rotateCode');
           rTicketLabelRec[I].bold := CkJsonObject_BoolOf(JOItem, 'bold');
+          rTicketLabelRec[I].editable_component_type := StrPas(CkJsonObject__stringOf(JOItem, 'editableComponentType'));
           rTicketLabelRec[I].text_content := StrPas(CkJsonObject__stringOf(JOItem, 'textContent'));
+          rTicketLabelRec[I].ticket_size_type := StrPas(CkJsonObject__stringOf(JOItem, 'ticketSizeType'));
+          rTicketLabelRec[I].editable_component_type_barcode := CkJsonObject_BoolOf(JOItem, 'editableComponentTypeBarcode');
+          rTicketLabelRec[I].editable_component_type_qrcode := CkJsonObject_BoolOf(JOItem, 'editableComponentTypeQrcode');
 
           //DoPrintTicketLabel(rTicketLabelRec, AResMsg);
         end;
@@ -578,66 +596,364 @@ end;
 
 
 procedure TTLSettingForm.Button5Click(Sender: TObject);
+var
+  nStatus: Integer;
 begin
+  nStatus := ConnectPrinterEx(2, '', 1024, 1025, 0, 0);
+  //nStatus := ConnectPrinterEx(0, 'COM7', 115200, 8, 0, 1);
+
+  memo1.Lines.Add('ConnectPrinterEx: ' + inttostr(nStatus));
+  if nStatus <> SLCS_ERR_CODE_NO_ERROR then
+    Exit;
+  nStatus := CheckStatus;
+
+  memo1.Lines.Add('CheckStatus: ' + inttostr(nStatus));
+  if nStatus <> SLCS_ERR_CODE_NO_ERROR then
+    Exit;
+
   DoPrintTicketLabel;
 end;
 
 function TTLSettingForm.DoPrintTicketLabel: Boolean;
 var
-  LSpeed, LDensity, LOrientation, LCuttingPeriod, LResolution, LDotsPer1mm: Integer;
-  LPaperWidth, LPaperHeight, LMarginX, LMarginY, LPosX, LPosY, LFontSize, LRotation: Integer;
+  LSpeed, LDensity, LOrientation, LResolution, LDotsPer1mm: Integer;
+  LPosX, LPosY, LFontSize, LRotation, LCuttingPeriod, LBarcodeSize, LQRCodeSize: Integer;
   LTextValue: string;
   LAutoCut, LBackFeeding, LIsBold: Boolean;
   nStatus, i: Integer;
+  bConnect: Boolean;
+
+  nWidth, nHeight, nPrinterY, nStartY: Integer;
+  nPaperWidth, nPaperHeight: Integer;
+  nFlipX, nFlipY, nTempX, nTempY: Integer;
+
+  sas, sAnsiStr: AnsiString;
+  qrSize: integer;
 begin
   Result := False;
-  //AResMsg := '';
+
+  if Length(rTicketLabelRec) < 1 then
+    Exit;
+  (*
+  /**
+   * 프린터 통신 인터페이스
+   * @readonly
+   * @enum {number}
+   */
+  export const N_INTERFACE_TYPE = {
+    /** 직렬(COM) 프린터 */
+    INF_SERIAL: 0,
+    /** 병렬(LPT) 프린터 */
+    INF_PARALLEL: 1,
+    /** USB 프린터 */
+    INF_USB: 2,
+    /** 이더넷(Ethernet) 프린터 */
+    INF_ETHERNET: 3,
+    /** 직렬(COM) 프린터 */
+    INF_WIFI: 4,
+    /** 직렬(COM) 프린터 */
+    INF_BLUETOOTH: 5,
+  } as const
+  *)
 
   // SERIAL (COM)
-  nStatus := ConnectPrinterEx(0, 'COM4', 115200, 8, 0, 1);
+  //nStatus := ConnectPrinterEx(0, 'COM4', 115200, 8, 0, 1);
+  nStatus := ConnectPrinterEx(2, '', 1024, 1025, 0, 0);
   if nStatus <> SLCS_ERR_CODE_NO_ERROR then
     Exit;
 
+  //1.프린터 설정
+  //LResolution := GetPrinterDPI; //pc와 연결된 프린터의 해상도 값을 가져옴.
+  //LDotsPer1mm := Round(LResolution / 25.4); //_MM2D = 8;
+  LDotsPer1mm := 8;
+  nPrinterY := 800;
+
+  if rTicketLabelRec[0].ticket_size_type = 'ticketSize_150' then
+  begin
+		nWidth := 149 * LDotsPer1mm;
+		nHeight := 60 * LDotsPer1mm;
+
+    nPaperWidth := Trunc(101.6 * LDotsPer1mm);
+    nPaperHeight := Trunc(149 * LDotsPer1mm);
+  end
+  else
+  begin
+    nWidth := 187 * LDotsPer1mm;
+    nHeight := 75 * LDotsPer1mm;
+
+    nPaperWidth := Trunc(101.6 * LDotsPer1mm);
+    nPaperHeight := Trunc(187.5 * LDotsPer1mm);
+  end;
+
+  nStartY := Trunc((nPrinterY - nHeight) / 2);
+  { 참고
+  Math.floor 는 소수값이 존재할 때 소수값을 버리는 역활을 하는 함수이며,  -> trunc
+  Math.round 는 소수값에 따라 올리거나 버리는 역활을 하는 반올림 함수입니다.  -> round
+  }
+
   try
-    LDensity := 14;
-    LOrientation := Ord(TLabelOrientation.loTopToBottom);
-    LCuttingPeriod := 1;
-    LAutoCut := True;
-    LBackFeeding := True;
-    LResolution := GetPrinterDPI; //pc와 연결된 프린터의 해상도 값을 가져옴.
-    LDotsPer1mm := Round(LResolution / 25.4);
-    //마진값 설정 확인 필요
-    LMarginX := (0 * LDotsPer1mm);
-    LMarginY := (0 * LDotsPer1mm);
-
     ClearBuffer;
-    SetConfigOfPrinter(SLCS_PRINTER_SETTING_SPEED, LDensity, LOrientation, LAutoCut, LCuttingPeriod, LBackFeeding);   // 프린터의 인쇄 속도, 농도, 인쇄 방향, 절단 옵션을 설정
-    //                                   인쇄속도, 인쇄농도,     인쇄방향, 절단동작,       절단간격,    TRUE(고정)
 
-    SetCharacterset(SLCS_ICS_KOREA, SLCS_FCP_CP437);  // 문자 인쇄에 사용되는 ㅋ드테이블과 국제 문자 집합을 설정합니다.
-
-    SetPaper(LMarginX, LMarginY, LPaperWidth, LPaperHeight, SLCS_BLACKMARK, 0, LDotsPer1mm * 2);  //라벨의 길이, 너비, 라벨용지의 유형을 설정
-    //수평방향여백, 수직방향여백, 라벨너비, 라벨길이, 라벨용지유형, 블랙마크와 절취서간 길이, 블랙마크의 두께
-
-    PrintDirect('STd', True); //STd: Direct thermal, STt: Thermal transfer
-
-    for I := 0 to Length(rTicketLabelRec) -1 do
-    //I := 1;
+    for I := 1 to Length(rTicketLabelRec) -1 do
     begin
-      LPaperWidth := Trunc(rTicketLabelRec[I].mmwidth * LDotsPer1mm);
-      LPaperHeight := Trunc(rTicketLabelRec[I].mmheight * LDotsPer1mm);
-      LPosX := Trunc(rTicketLabelRec[I].mmx * LDotsPer1mm);
-      LPosY := Trunc(rTicketLabelRec[I].mmy * LDotsPer1mm);
-      LFontSize := rTicketLabelRec[I].font_size;
+      memo1.Lines.Add(
+                      'mmx: ' + floattostr(rTicketLabelRec[I].mmx) + ' / ' +
+                      'mmy: ' + floattostr(rTicketLabelRec[I].mmy) + ' / ' +
+                      'font_size: ' + inttostr(rTicketLabelRec[I].font_size) + ' / ' +
+                      'rotate_code: ' + inttostr(rTicketLabelRec[I].rotate_code) + ' / ' +
+                      'text_content: ' + rTicketLabelRec[I].text_content
+                      );
+
+      if rTicketLabelRec[I].text_content = 'null' then
+        Continue;
+
+      LFontSize := 0;
+      case rTicketLabelRec[I].font_size of
+        1: LFontSize := 8;
+  			2: LFontSize := 12;
+  			3: LFontSize := 16;
+  			4: LFontSize := 18;
+  			5: LFontSize := 22;
+  			6: LFontSize := 28;
+  			7: LFontSize := 36;
+  			8: LFontSize := 40;
+  			9: LFontSize := 48;
+        else
+          LFontSize := 16;
+      end;
+
       LRotation := rTicketLabelRec[I].rotate_code;
+      case LRotation of
+        0: LOrientation := 1; // [0도] 정방향
+        1: LOrientation := 0; // [90도] 세로 우
+        2: LOrientation := 0; // [180도]
+        3: LOrientation := 1; // [270도] 세로 왼
+        else
+          LOrientation := 1;
+      end;
+
+      if LOrientation = 1 then
+      begin
+        LRotation := (LRotation + 1) mod 4;
+      end
+      else
+      begin
+        if 0 < LRotation then
+          LRotation := LRotation - 1
+        else
+          LRotation := 3;
+      end;
+
+      LPosX := Trunc(nWidth - rTicketLabelRec[I].mmx * LDotsPer1mm);
+      LPosY := Trunc(nStartY + rTicketLabelRec[I].mmy * LDotsPer1mm);
+
+      if LOrientation = 1 then
+      begin
+        // 반전
+        nFlipX := Trunc(nPaperHeight - LPosX);
+        nFlipY := Trunc(nPaperWidth - LPosY);
+
+        LPosX := nFlipX;
+        LPosY := nFlipY;
+      end;
+
+      nTempX := LPosX;
+      nTempY := LPosY;
+
+      LPosX := nTempY + 16;
+      LPosY := nTempX + 16;
+
       LIsBold := rTicketLabelRec[I].bold;
       LTextValue := rTicketLabelRec[I].text_content;
 
-      //PrintTrueFontW(LPosX, LPosY, PChar('Arial'), LFontSize, LRotation, False, LIsBold, False, PChar(LTextValue), False);
-      PrintTrueFontW(LPosX, LPosY, PChar('Arial'), 10, 1, False, LIsBold, False, PChar(LTextValue), False);
+
+      // 마지막 보정 - 추가해야 함.
+      (*
+      TOP_DOWN: {
+          vertical: 0 * MM_TO_DOT,
+        },
+        BOTTOM_TOP: {
+          horizontal: 2 * MM_TO_DOT,
+          vertical: 2 * MM_TO_DOT,
+        },
+      150
+
+                TOP_DOWN: {
+          vertical: 0 * MM_TO_DOT,
+        },
+        BOTTOM_TOP: {
+          horizontal: 3 * MM_TO_DOT,
+          vertical: 2 * MM_TO_DOT,
+        },
+
+      [180]
+      *)
+
+      if rTicketLabelRec[I].editable_component_type_barcode then
+      begin
+        LBarcodeSize := 0;
+        if rTicketLabelRec[I].editable_component_type = 'barcode' then
+          LBarcodeSize := 3
+        else if rTicketLabelRec[I].editable_component_type = 'parkingBarcode' then
+          LBarcodeSize := 3
+        else if rTicketLabelRec[I].editable_component_type = 'lgartBarcode' then
+          LBarcodeSize := 3
+        else if rTicketLabelRec[I].editable_component_type = 'tlPrdLgartBarcode' then
+          LBarcodeSize := 2
+        else if rTicketLabelRec[I].editable_component_type = 'smallBarcode' then
+          LBarcodeSize := 2
+        else
+          LBarcodeSize := 2;
+
+        sAnsiStr := LTextValue;
+        Print1DBarcode(
+            LPosX,
+            LPosY,
+            1, // CODE128
+            LBarcodeSize, //좁은 바 너비
+            10, //넗은 바 너비
+            50, // 바코드 높이
+            LRotation,
+            0,
+            PAnsiChar(sAnsiStr)
+        );
+
+        memo1.Lines.Add(
+                      'barcode -> mmx: ' + inttostr(LPosX) + ' / ' +
+                      'mmy: ' + inttostr(LPosY) + ' / ' +
+                      'LBarcodeSize: ' + inttostr(LBarcodeSize) + ' / ' +
+                      'LRotation: ' + inttostr(LRotation) + ' / ' +
+                      'text_content: ' + LTextValue
+                      );
+
+      end
+      else if rTicketLabelRec[I].editable_component_type_qrcode then
+      begin
+        //x,y좌표를 QR코드 정 가운데로 잡습니다 회전기준.
+        LQRCodeSize := 0;
+        if rTicketLabelRec[I].editable_component_type = 'qrCode1' then
+          LQRCodeSize := 1
+        else if rTicketLabelRec[I].editable_component_type = 'qrCode2' then
+          LQRCodeSize := 2
+        else if rTicketLabelRec[I].editable_component_type = 'qrCode3' then
+          LQRCodeSize := 3
+        else if rTicketLabelRec[I].editable_component_type = 'qrCode4' then
+          LQRCodeSize := 4
+        else if rTicketLabelRec[I].editable_component_type = 'qrCode5' then
+          LQRCodeSize := 5
+        else if rTicketLabelRec[I].editable_component_type = 'qrCode6' then
+          LQRCodeSize := 6
+        else if rTicketLabelRec[I].editable_component_type = 'qrCode7' then
+          LQRCodeSize := 7
+        else if rTicketLabelRec[I].editable_component_type = 'qrCode8' then
+          LQRCodeSize := 8
+        else if rTicketLabelRec[I].editable_component_type = 'parkingQrcode' then
+          LQRCodeSize := 5
+        else if rTicketLabelRec[I].editable_component_type = 'questionnaireQrcode' then
+          LQRCodeSize := 3
+        else if rTicketLabelRec[I].editable_component_type = 'seoulArtCenterQrcode' then
+          LQRCodeSize := 5
+        else
+          LQRCodeSize := 5;
+
+        nTempX := 0;
+        nTempY := 0;
+        qrSize := Trunc(2.7 * 8 * LQRCodeSize);
+
+        if LRotation = 1 then
+            nTempX := nTempX - qrSize
+        else if LRotation = 2 then
+        begin
+          nTempX := nTempX - qrSize;
+          nTempY := nTempY - qrSize;
+        end
+        else if lrotation = 3 then
+          nTempY := nTempY - qrSize;
+
+        LPosX :=LPosX + nTempX;
+        LPosY :=LPosY + nTempY;
+
+        // 전체적으로 QR이 약간 밀려 보이는 증상 보정
+        if LOrientation = 1 then
+        begin
+          LPosX := LPosX - 4;
+          LPosY := LPosY - 8;
+        end
+        else
+        begin
+          LPosX := LPosX - 5;
+          LPosY := LPosY - 10;
+        end;
+
+        sAnsiStr := LTextValue;
+        PrintQRCode(
+                    LPosX,
+                    LPosY,
+                    2,  // QRMODE_2
+                    30, // 에러보정레벨?
+                    LQRCodeSize,
+                    LRotation,
+                    PAnsiChar(sAnsiStr)
+        );
+
+        memo1.Lines.Add(
+                      'qrcode -> mmx: ' + inttostr(LPosX) + ' / ' +
+                      'mmy: ' + inttostr(LPosY) + ' / ' +
+                      'LQRCodeSize: ' + inttostr(LQRCodeSize) + ' / ' +
+                      'LRotation: ' + inttostr(LRotation) + ' / ' +
+                      'text_content: ' + LTextValue
+                      );
+
+
+
+
+
+
+      end
+      else
+      begin
+        if LIsBold = True then
+          PrintTrueFontW(LPosX, LPosY, PChar('굴림'), LFontSize, LRotation, False, True, False, PChar(LTextValue), True)
+        else
+          PrintTrueFontW(LPosX, LPosY, PChar('굴림'), LFontSize, LRotation, False, False, False, PChar(LTextValue), True);
+        //printTrueFontLib(LPosX, LPosY, PAnsiChar(sas), LFontSize, LRotation, False, LIsBold, False, PAnsiChar(sAnsiStr), True);
+
+        memo1.Lines.Add(
+                      '-> mmx: ' + inttostr(LPosX) + ' / ' +
+                      'mmy: ' + inttostr(LPosY) + ' / ' +
+                      'font_size: ' + inttostr(LFontSize) + ' / ' +
+                      'rotate_code: ' + inttostr(LRotation) + ' / ' +
+                      'LIsBold: '+ BoolToStr(LIsBold) + ' / ' +
+                      'text_content: ' + LTextValue
+                      );
+
+      end;
+
+
+
     end;
 
+
+
+
+    LSpeed := 5;
+    LDensity := 14 + 1;
+    LAutoCut := True; //연속 출력 필요시 false 로. 마지막 출력시 true
+    LCuttingPeriod := 1;
+    LBackFeeding := True;
+
+    memo1.Lines.Add(
+                      'SetConfigOfPrinter - ' +
+                      'LOrientation: ' + inttostr(LOrientation)
+                      );
+
+    //SetConfigOfPrinter(SLCS_PRINTER_SETTING_SPEED, LDensity, LOrientation, LAutoCut, LCuttingPeriod, LBackFeeding);   // 프린터의 인쇄 속도, 농도, 인쇄 방향, 절단 옵션을 설정
+    //                                   인쇄속도, 인쇄농도,     인쇄방향, 절단동작,       절단간격,    TRUE(고정)
+    SetConfigOfPrinter(LSpeed, LDensity, LOrientation, LAutoCut, LCuttingPeriod, LBackFeeding);
+
     Prints(1, 1);
+    //ReadBuff_N; // 티켓링크 전용 SDK 일 경우 -> 라벨프린터 메모리 정리
+    //ReadBuff;
     DisconnectPrinter;
 
     Result := True;
@@ -646,6 +962,5 @@ begin
       //AResMsg := E.Message;
   end;
 end;
-
 
 end.

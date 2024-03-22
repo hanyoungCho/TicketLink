@@ -80,7 +80,6 @@ type
     lblPaymentTotalPriceTitle: TLabel;
     lblPaymentTotalPriceValue: TLabel;
     lblPaymentTotalQtyUnit: TLabel;
-    lblPayMethod: TLabel;
     btnDoCreditCard: TcxButton;
     btnDoPAYCO: TcxButton;
     btnDoPayment: TcxButton;
@@ -156,6 +155,23 @@ type
     panLocale2: TPanel;
     panLocale3: TPanel;
     tmrPopupCloser: TTimer;
+    Panel1: TPanel;
+    Panel4: TPanel;
+    Panel5: TPanel;
+    Image2: TImage;
+    panPayment: TPanel;
+    panCard: TPanel;
+    panPayco: TPanel;
+    imgPayco313: TImage;
+    imgPayco231: TImage;
+    imgPayco477: TImage;
+    imgPayco477b: TImage;
+    panAlipay: TPanel;
+    imgAlipay231: TImage;
+    imgAlipay313: TImage;
+    panWechat: TPanel;
+    imgWechat231: TImage;
+    imgWechat313: TImage;
 
     procedure PluginModuleActivate(Sender: TObject);
     procedure PluginModuleClose(Sender: TObject; var Action: TCloseAction);
@@ -179,6 +195,13 @@ type
     procedure tmrPopupCloserTimer(Sender: TObject);
     procedure btnChangeLocaleMouseUp(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X,
       Y: Integer);
+    procedure imgPayco231Click(Sender: TObject);
+    procedure imgPayco313Click(Sender: TObject);
+    procedure imgPayco477Click(Sender: TObject);
+    procedure imgAlipay231Click(Sender: TObject);
+    procedure imgAlipay313Click(Sender: TObject);
+    procedure imgWechat231Click(Sender: TObject);
+    procedure imgWechat313Click(Sender: TObject);
   private
     { Private declarations }
     FOwnerId: Integer;
@@ -219,7 +242,7 @@ type
     procedure ClearOrderList;
     function CheckRoundRemainCount(const ASearchDate: string; const AProductId, AScheduleId: Integer): Boolean;
     procedure DoPaymentCard;
-    procedure DoPaymentPayco;
+    procedure DoPaymentPayco(AType: string);
     function DoPrintReceiptAndTicket: Boolean;
     procedure DispCurrentTime;
     procedure SetNavigator(const AScrollBoxHandle: Integer);
@@ -380,13 +403,92 @@ begin
   btnOrderClear.OnCustomDraw := Global.OnCxButtonCustomDraw;
   MakeRoundedControl(btnDoPayment);
   btnOrderClear.OnCustomDraw := Global.OnCxButtonCustomDraw;
+
+
+  if (Global.StoreInfo.AllowAliPay = True) and (Global.StoreInfo.AllowWechatPay = True) then
+  begin
+    panAlipay.Visible := True;
+    panAlipay.Width := 231; //313
+    imgAlipay231.Visible := True;
+    imgAlipay313.Visible := False;
+
+    panWechat.Visible := True;
+    panWechat.Width := 231; //313
+    panWechat.Left := 245;
+    imgWechat231.Visible := True;
+    imgWechat313.Visible := False;
+
+    panPayco.Width := 231; //313 477
+    panPayco.Left := 490;
+    imgPayco231.Visible := True;
+    imgPayco313.Visible := False;
+    imgPayco477.Visible := False;
+    imgPayco477b.Visible := False;
+
+    panCard.Width := 231; //313 477
+  end
+  else if (Global.StoreInfo.AllowAliPay = True) or (Global.StoreInfo.AllowWechatPay = True) then
+  begin
+    panAlipay.Visible := Global.StoreInfo.AllowAliPay;
+    panAlipay.Width := 313;
+    imgAlipay231.Visible := False;
+    imgAlipay313.Visible := True;
+
+    panWechat.Visible := Global.StoreInfo.AllowWechatPay;
+    panWechat.Width := 313;
+    panWechat.Left := 0;
+    imgWechat231.Visible := False;
+    imgWechat313.Visible := True;
+
+    panPayco.Width := 313; //313 477
+    panPayco.Left := 327;
+    imgPayco231.Visible := False;
+    imgPayco313.Visible := True;
+    imgPayco477.Visible := False;
+    imgPayco477b.Visible := False;
+
+    panCard.Width := 313; //313 477
+  end
+  else
+  begin
+    panAlipay.Visible := False;
+    panAlipay.Width := 231; //313
+    imgAlipay231.Visible := True;
+    imgAlipay313.Visible := False;
+
+    panWechat.Visible := False;
+    panWechat.Width := 231; //313
+    panWechat.Left := 245;
+    imgWechat231.Visible := True;
+    imgWechat313.Visible := False;
+
+    panPayco.Width := 477;
+    panPayco.Left := 0;
+    imgPayco231.Visible := False;
+    imgPayco313.Visible := False;
+    //if Global.StoreInfo.AllowPAYCO then
+    begin
+      imgPayco477.Visible := True;
+      imgPayco477b.Visible := False;
+    end;
+    {else
+    begin
+      imgPayco477.Visible := False;
+      imgPayco477b.Visible := True;
+    end;
+    }
+    panCard.Width := 477; //313 477
+  end;
+
   MakeRoundedControl(btnDoCreditCard);
   btnDoCreditCard.OnCustomDraw := Global.OnCxButtonCustomDraw;
-  MakeRoundedControl(btnDoPAYCO);
-  btnDoPAYCO.OnCustomDraw := Global.OnCxButtonCustomDraw;
+
+  //MakeRoundedControl(btnDoPAYCO);
+  //btnDoPAYCO.OnCustomDraw := Global.OnCxButtonCustomDraw;
+
   //결제 가능한 수단만 활성화
   btnDoCreditCard.Enabled := Global.StoreInfo.AllowCreditCard;
-  btnDoPAYCO.Enabled := Global.StoreInfo.AllowPAYCO;
+  //btnDoPAYCO.Enabled := Global.StoreInfo.AllowPAYCO;
 
   btnTicketHome.Enabled := Global.StoreInfo.ShowTicketingMenu;
   btnTicketHome.Left := 92;
@@ -594,7 +696,42 @@ end;
 
 procedure TPluginForm.btnDoPAYCOClick(Sender: TObject);
 begin
-  DoPaymentPAYCO;
+  DoPaymentPAYCO(PMC_PAYCO);
+end;
+
+procedure TPluginForm.imgAlipay231Click(Sender: TObject);
+begin
+  DoPaymentPAYCO(PMC_ALIPAY);
+end;
+
+procedure TPluginForm.imgAlipay313Click(Sender: TObject);
+begin
+  DoPaymentPAYCO(PMC_ALIPAY);
+end;
+
+procedure TPluginForm.imgPayco231Click(Sender: TObject);
+begin
+  DoPaymentPAYCO(PMC_PAYCO);
+end;
+
+procedure TPluginForm.imgPayco313Click(Sender: TObject);
+begin
+  DoPaymentPAYCO(PMC_PAYCO);
+end;
+
+procedure TPluginForm.imgPayco477Click(Sender: TObject);
+begin
+  DoPaymentPAYCO(PMC_PAYCO);
+end;
+
+procedure TPluginForm.imgWechat231Click(Sender: TObject);
+begin
+  DoPaymentPAYCO(PMC_WECHAT);
+end;
+
+procedure TPluginForm.imgWechat313Click(Sender: TObject);
+begin
+  DoPaymentPAYCO(PMC_WECHAT);
 end;
 
 procedure TPluginForm.btnDoPaymentClick(Sender: TObject);
@@ -672,11 +809,10 @@ var
   MS: TMemoryStream;
   LStartDate, LProdClassType, LProdTypeCode, LDispProdDate, LErrMsg: string;
 begin
-  ShowWaitMsg(GetTextLocale([
-    '회차 정보를 조회 중입니다...' + _CRLF + '잠시만 기다려 주십시오.',
-    'Retrieving showtime information...' + _CRLF + 'Please hold.',
-    '商品情報を照会しています...' + _CRLF + 'しばらくお待ちください。',
-    '正在搜索场次信息...' + _CRLF + '请稍后。']));
+  ShowWaitMsg(GetTextLocale(['회차 정보를 조회 중입니다...' + _CRLF + '잠시만 기다려 주십시오.',
+                            'Retrieving showtime information...' + _CRLF + 'Please hold.',
+                            '商品情報を照会しています...' + _CRLF + 'しばらくお待ちください。',
+                            '正在搜索场次信息...' + _CRLF + '请稍后。']));
   try
     try
       //주의) FSelectedProductDate --> yyyy.mm.dd 형식임
@@ -757,8 +893,14 @@ begin
     end;
   except
     on E: Exception do
+    begin
+      {
       ShowMsgBoxError(GetTextLocale(['무인발권기 이용이 불가합니다.', 'Ticket Kiosk is currently unavailable.', '無人発券機を利用できません。', '无法使用无人售票机。']),
         E.Message, [GetTextLocale(['확인', 'Confirm', '確認', '确认'])], 5);
+      }
+      ShowMsgBoxError(GetTextLocale(['구매가능한 회차가 없습니다.', 'There are no showtimes available for purchase.', '購入可能な商品がありません。', '无可购买的场次。']),
+        E.Message, [GetTextLocale(['확인', 'Confirm', '確認', '确认'])], 5);
+    end;
   end;
 end;
 
@@ -1041,6 +1183,7 @@ begin
           DI.DenominLimitCount := FieldByName('denomination_limit_count').AsInteger;
           DI.ScheduleRemainCount := FieldByName('schedule_remain_count').AsInteger;
           DI.DenominDescription := FieldByName('denomination_description').AsString;
+          DI.DenominDescriptionEN := FieldByName('denomination_description_eng').AsString;
           DI.LimitCardKcpPaymentYN := FieldByName('limit_card_kcp_payment_yn').AsBoolean;
           DI.LimitCardBinCodeList.Text := FieldByName('limit_card_bin_code_list').AsString;
           DI.BasePanel.Parent := Self.sbxDenominList;
@@ -1110,7 +1253,7 @@ begin
   OI.RoundIndex := Global.DenominList[ADenominIndex].RoundIndex;
   OI.DenominIndex := ADenominIndex;
   OI.DenominId := Global.DenominList[ADenominIndex].DenominId;
-  OI.ItemTitle := Global.DenominList[ADenominIndex].DenominName;
+  OI.ItemTitle := GetTextLocale([Global.DenominList[ADenominIndex].DenominName, Global.DenominList[ADenominIndex].DenominNameEN]);
   OI.ItemPrice := Global.DenominList[ADenominIndex].SalePrice;
   OI.ItemQty := AItemQty;
   OI.BuyDoubleCount := Global.DenominList[ADenominIndex].BuyDoubleCount;
@@ -1413,10 +1556,56 @@ begin
   end;
 end;
 
-procedure TPluginForm.DoPaymentPAYCO;
+procedure TPluginForm.DoPaymentPAYCO(AType: string);
 var
   PM: TPluginMessage;
+  sMsg: String;
+  nIdx: Integer;
 begin
+
+  for var I: ShortInt := 0 to Pred(Global.OrderList.Count) do
+  begin
+    nIdx := Global.OrderList[I].DenominIndex;
+
+    if (Global.DenominList[nIdx].LimitCardKcpPaymentYN = False) or
+       (Global.DenominList[nIdx].LimitCardBinCodeList.Count = 0) then
+      Continue;
+
+    sMsg := '';
+
+    if AType = PMC_PAYCO then
+    begin
+      sMsg := GetTextLocale(['할인카드 권종은' + _CRLF + 'PAYCO로 결제할 수 없습니다.',
+                             'If you are getting credit card discount,' + _CRLF + 'you are NOT able to proceed with PAYCO.',
+                             '割引カードの券種は、PAYCOで決済できません。' + _CRLF + 'クレジットカードで決済してください。',
+                             '使用优惠卡的门票种类不支持 PAYCO支付，' + _CRLF + '请使用银行卡支付。']);
+    end
+    else if AType = PMC_ALIPAY then
+    begin
+      sMsg := GetTextLocale(['할인카드 권종은' + _CRLF + 'Alipay로 결제할 수 없습니다.',
+                             'If you are getting credit card discount,' + _CRLF + 'you are NOT able to proceed with Alipay.',
+                             '割引カードの券種は、Alipayで決済できません。' + _CRLF + 'クレジットカードで決済してください。',
+                             '使用优惠卡的门票种类不支持 Alipay支付，' + _CRLF + '请使用银行卡支付。']);
+    end
+    else if AType = PMC_WECHAT then
+    begin
+      sMsg := GetTextLocale(['할인카드 권종은' + _CRLF + 'Wechat Pay로 결제할 수 없습니다.',
+                             'If you are getting credit card discount,' + _CRLF + 'you are NOT able to proceed with Wechat Pay.',
+                             '割引カードの券種は、Wechat Pay で決済できません。' + _CRLF + 'クレジットカードで決済してください。',
+                             '使用优惠卡的门票种类不支持 Wechat Pay支付，' + _CRLF + '请使用银行卡支付。']);
+    end;
+
+    ShowMsgBoxError(
+      sMsg,
+      GetTextLocale(['카드결제로 진행해 주세요.',
+                     'Please try again with Credit Card payment.',
+                     'クレジットカードで決済してください。',
+                     '请使用银行卡支付。']),
+      [GetTextLocale(['확인', 'Confirm', '確認', '确认'])], 5);
+    Exit;
+  end;
+
+  {
   if not Global.StoreInfo.AllowPAYCO then
   begin
     ShowMsgBoxError(
@@ -1431,7 +1620,7 @@ begin
       [GetTextLocale(['확인', 'Confirm', '確認', '确认'])], 5);
     Exit;
   end;
-
+  }
   if FWorking then
     Exit;
   FWorking := True;
@@ -1444,6 +1633,7 @@ begin
     PM := TPluginMessage.Create(nil);
     PM.Command := CPC_INIT;
     PM.AddParams(CPP_VALUE, OrderTotalPrice);
+    PM.AddParams(CPP_TYPE, AType);
     if (PluginManager.OpenModal('TLPaymentPayco.bpl', PM) = mrOK) then
     begin
       DoPrintReceiptAndTicket;
@@ -1465,8 +1655,11 @@ var
 begin
   Result := False;
   try
+    { chy test - 프린터
     if (Global.TicketPrinter.Enabled and (not Global.TicketPrinter.Active)) or
        ((not Global.ReceiptPrinter.Enabled) or (not Global.ReceiptPrinter.Active)) then
+       }
+    if (not Global.ReceiptPrinter.Enabled) or (not Global.ReceiptPrinter.Active) then
       raise Exception.Create(GetTextLocale(['티켓/영수증 프린터 사용 불가.',
                                             'Unable to use ticket/receipt printer.',
                                             'チケット/領収書プリンターを利用できません。',
@@ -1737,12 +1930,21 @@ begin
     lblPaymentDenominAmt.Font.Color := Colors.type4; //금액
     PaymentListSeparator2.Color := Colors.line2;
     //신용카드 결제
+    {
     btnDoCreditCard.Colors.Normal := Colors.grpbtn_face_default;
     btnDoCreditCard.Colors.NormalText := Colors.grpbtn_font_default;
     btnDoCreditCard.Colors.Pressed := Colors.grpbtn_face_pressed;
     btnDoCreditCard.Colors.PressedText := Colors.grpbtn_font_pressed;
     btnDoCreditCard.Colors.Disabled := Colors.grpbtn_face_disabled;
     btnDoCreditCard.Colors.DisabledText := Colors.grpbtn_font_disabled;
+    }
+    btnDoCreditCard.Colors.Normal := Colors.grpbtn_face_active_default;
+    btnDoCreditCard.Colors.NormalText := Colors.grpbtn_font_active_default;
+    btnDoCreditCard.Colors.Pressed := Colors.grpbtn_face_active_pressed;
+    btnDoCreditCard.Colors.PressedText := Colors.grpbtn_font_active_pressed;
+    btnDoCreditCard.Colors.Disabled := Colors.grpbtn_face_active_disabled;
+    btnDoCreditCard.Colors.DisabledText := Colors.grpbtn_font_active_disabled;
+
     //PAYCO 간편결제
     btnDoPAYCO.Colors.Normal := Colors.grpbtn_face_active_default;
     btnDoPAYCO.Colors.NormalText := Colors.grpbtn_font_active_default;
@@ -1794,8 +1996,9 @@ begin
           lblPaymentTotalQtyUnit.Caption := '매';
           lblPaymentTotalPriceTitle.Caption := '결제금액';
           lblPaymentTotalPriceUnit.Caption := '원';
-          lblPayMethod.Caption := '결제방법' + _CRLF + '선택';
-          btnDoCreditCard.Caption := '신용카드 결제';
+          //lblPayMethod.Caption := '결제방법' + _CRLF + '선택';
+          //btnDoCreditCard.Caption := '신용카드 결제';
+          btnDoCreditCard.Caption := '카드결제';
           btnDoPAYCO.Caption := 'PAYCO 결제';
         end;
       TKioskLocale.klEnglish:
@@ -1806,12 +2009,12 @@ begin
           btnChangeProductDate.Caption := 'Change date';
 
           lblBuyingNone.Caption := 'Please choose a ticket.';
-          lblOrderTotalQtyTitle.Width := 205;
+          lblOrderTotalQtyTitle.Width := 60;          //qa_v0.3_20240216 - 9 page
           lblOrderTotalQtyTitle.Caption := 'QTY';
           lblOrderTotalQtyUnit.Caption := '';
           lblOrderTotalPriceTitle.Caption := 'Total amount';
           lblOrderTotalPriceUnit.Caption := 'KRW';
-          btnOrderClear.Caption := 'Clear';
+          btnOrderClear.Caption := 'Delete';          // qa_v0.3_20240216 - 9 page
           btnDoPayment.Caption := 'Check-out';
 
           if (Global.DenominCategoryList.Count > 0) then
@@ -1822,12 +2025,12 @@ begin
           lblPaymentDenominQty.Caption := 'QTY';
           lblPaymentDenominAmt.Caption := 'Price';
 
-          lblPaymentTotalQtyTitle.Width := 205;
+          lblPaymentTotalQtyTitle.Width := 60;
           lblPaymentTotalQtyTitle.Caption := 'QTY';
           lblPaymentTotalQtyUnit.Caption := '';
           lblPaymentTotalPriceTitle.Caption := 'Total amount';
           lblPaymentTotalPriceUnit.Caption := 'KRW';
-          lblPayMethod.Caption := 'Payment';
+          //lblPayMethod.Caption := 'Payment';
           btnDoCreditCard.Caption := 'Credit card';
           btnDoPAYCO.Caption := 'PAYCO';
         end;
@@ -1839,7 +2042,7 @@ begin
           btnChangeProductDate.Caption := '日付変更';
 
           lblBuyingNone.Caption := '券種を選択してください。';
-          lblOrderTotalQtyTitle.Width := 205;
+          lblOrderTotalQtyTitle.Width := 180;
           lblOrderTotalQtyTitle.Caption := 'チケット枚数';
           lblOrderTotalQtyUnit.Caption := '';
           lblOrderTotalPriceTitle.Caption := '決済金額';
@@ -1855,12 +2058,12 @@ begin
           lblPaymentDenominQty.Caption := '枚数';
           lblPaymentDenominAmt.Caption := '価格';
 
-          lblPaymentTotalQtyTitle.Width := 205;
+          lblPaymentTotalQtyTitle.Width := 180;
           lblPaymentTotalQtyTitle.Caption := 'チケット枚数';
           lblPaymentTotalQtyUnit.Caption := '';
           lblPaymentTotalPriceTitle.Caption := '決済金額';
           lblPaymentTotalPriceUnit.Caption := 'KRW';
-          lblPayMethod.Caption := '決済手段';
+          //lblPayMethod.Caption := '決済手段';
           btnDoCreditCard.Caption := 'クレジットカード';
           btnDoPAYCO.Caption := 'PAYCO';
         end;
@@ -1872,7 +2075,7 @@ begin
           btnChangeProductDate.Caption := '更改日期';
 
           lblBuyingNone.Caption := '请选门票种类。';
-          lblOrderTotalQtyTitle.Width := 205;
+          lblOrderTotalQtyTitle.Width := 65;
           lblOrderTotalQtyTitle.Caption := '票数';
           lblOrderTotalQtyUnit.Caption := '';
           lblOrderTotalPriceTitle.Caption := '支付金额';
@@ -1888,12 +2091,12 @@ begin
           lblPaymentDenominQty.Caption := '张';
           lblPaymentDenominAmt.Caption := '价格';
 
-          lblPaymentTotalQtyTitle.Width := 205;
+          lblPaymentTotalQtyTitle.Width := 65;
           lblPaymentTotalQtyTitle.Caption := '票数';
           lblPaymentTotalQtyUnit.Caption := '';
           lblPaymentTotalPriceTitle.Caption := '支付金额';
           lblPaymentTotalPriceUnit.Caption := 'KRW';
-          lblPayMethod.Caption := '支付方式';
+          //lblPayMethod.Caption := '支付方式';
           btnDoCreditCard.Caption := '信用卡';
           btnDoPAYCO.Caption := 'PAYCO';
         end;

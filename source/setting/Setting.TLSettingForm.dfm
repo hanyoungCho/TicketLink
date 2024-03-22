@@ -2611,6 +2611,14 @@ object TLSettingForm: TTLSettingForm
         Alignment = taRightJustify
         Caption = 'VAN-TID'
       end
+      object lblSiteCd: TLabel
+        Left = 330
+        Top = 171
+        Width = 80
+        Height = 15
+        Alignment = taRightJustify
+        Caption = #49324#51060#53944' '#53076#46300
+      end
       object edtServerHost: TEdit
         Left = 160
         Top = 24
@@ -2744,6 +2752,20 @@ object TLSettingForm: TTLSettingForm
         Caption = #45800#47568#44592' '#47924#44208#49457' '#44160#49324' '#53580#49828#53944
         TabOrder = 7
         OnClick = btnICReaderVerifyClick
+      end
+      object edtSiteCode: TEdit
+        Left = 416
+        Top = 167
+        Width = 153
+        Height = 23
+        CharCase = ecUpperCase
+        Font.Charset = HANGEUL_CHARSET
+        Font.Color = clBlack
+        Font.Height = -15
+        Font.Name = #44404#47548
+        Font.Style = []
+        ParentFont = False
+        TabOrder = 10
       end
     end
     object gbxPayco: TGroupBox

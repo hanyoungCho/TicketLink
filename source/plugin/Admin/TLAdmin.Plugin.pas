@@ -168,6 +168,8 @@ begin
   try
     PM.Command := CPC_INIT;
     PM.AddParams(CPP_OWNER_ID, Self.PluginID);
+    //chy test
+    PM.AddParams(CPP_VALUE, 1);
     PluginManager.OpenModal('TLPrepare.bpl', PM);
   finally
     FreeAndNil(PM);

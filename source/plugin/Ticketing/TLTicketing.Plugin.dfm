@@ -215,7 +215,7 @@ object PluginForm: TPluginForm
           Left = 144
           Top = 5
           Width = 214
-          Height = 80
+          Height = 55
           Margins.Left = 5
           Margins.Top = 5
           Margins.Right = 5
@@ -230,7 +230,6 @@ object PluginForm: TPluginForm
           ParentFont = False
           Transparent = False
           Layout = tlCenter
-          ExplicitHeight = 55
         end
       end
     end
@@ -318,7 +317,7 @@ object PluginForm: TPluginForm
     ParentBackground = False
     ParentColor = False
     TabOrder = 2
-    Properties.ActivePage = tabSearchPhoneNo
+    Properties.ActivePage = tabReserveList
     Properties.CustomButtons.Buttons = <>
     LookAndFeel.Kind = lfUltraFlat
     LookAndFeel.NativeStyle = False
@@ -329,6 +328,9 @@ object PluginForm: TPluginForm
     object tabSearchPhoneNo: TcxTabSheet
       Caption = #55092#45824#54256#48264#54840#47196' '#51312#54924
       ImageIndex = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object panBodyTicketPrintPhoneNoInput: TPanel
         Left = 124
         Top = 70
@@ -888,6 +890,9 @@ object PluginForm: TPluginForm
       Color = 3155225
       ImageIndex = 1
       ParentColor = False
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object panBodyTicketPrintReserveNoInput: TPanel
         Left = 124
         Top = 70
@@ -1158,6 +1163,9 @@ object PluginForm: TPluginForm
       Color = 3155225
       ImageIndex = 2
       ParentColor = False
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object panReserveInfo: TPanel
         Left = 0
         Top = 0
@@ -1221,8 +1229,8 @@ object PluginForm: TPluginForm
           object lblReserveUserNameTrail: TLabel
             Left = 148
             Top = 0
-            Width = 552
-            Height = 58
+            Width = 248
+            Height = 43
             Align = alClient
             Caption = ' '#51032' '#50696#47588#45236#50669' '#51077#45768#45796'.'
             Color = 3155225
@@ -1235,14 +1243,12 @@ object PluginForm: TPluginForm
             ParentFont = False
             Transparent = False
             Layout = tlBottom
-            ExplicitWidth = 248
-            ExplicitHeight = 43
           end
           object lblReserveUserName: TLabel
             Left = 0
             Top = 0
             Width = 148
-            Height = 58
+            Height = 59
             Align = alLeft
             Caption = #48149#51648#51008#45784
             Color = 3155225
@@ -1255,7 +1261,6 @@ object PluginForm: TPluginForm
             ParentFont = False
             Transparent = False
             Layout = tlCenter
-            ExplicitHeight = 59
           end
         end
       end
@@ -1285,6 +1290,9 @@ object PluginForm: TPluginForm
       Color = 3155225
       ImageIndex = 3
       ParentColor = False
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       object TemplateReservePanel1: TAdvSmoothPanel
         AlignWithMargins = True
         Left = 48
@@ -1471,7 +1479,7 @@ object PluginForm: TPluginForm
           object TemplateProductNameLabel1: TLabel
             Left = 0
             Top = 0
-            Width = 640
+            Width = 81
             Height = 43
             Align = alTop
             Caption = #49345#54408#47749
@@ -1485,7 +1493,6 @@ object PluginForm: TPluginForm
             ParentFont = False
             Transparent = False
             WordWrap = True
-            ExplicitWidth = 81
           end
           object TemplateProductDateTimeLabel1: TLabel
             Left = 0

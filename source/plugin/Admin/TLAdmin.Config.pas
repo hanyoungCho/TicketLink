@@ -49,6 +49,7 @@ type
     edtPaycoPosTID: TLabeledEdit;
     mmoLauncher: TMemo;
     ckbUseDetectCardInsert: TCheckBox;
+    edtSiteCode: TLabeledEdit;
 
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -218,6 +219,7 @@ begin
   ckbUsePG.Checked := Global.StoreInfo.UsePG;
   ckbUseDetectCardInsert.Checked := Global.StoreInfo.UseDetectCardInsert;
   edtVanCode.Text := Global.StoreInfo.VanCode;
+  edtSiteCode.Text := Global.StoreInfo.SiteCode;
   edtVanTID.Text := Global.StoreInfo.VanTID;
   edtPaycoVanTID.Text := Global.StoreInfo.PaycoVanTID;
   edtPaycoPosTID.Text := Global.StoreInfo.PaycoPosTID;
@@ -257,6 +259,7 @@ begin
   Global.StoreInfo.UsePG := ckbUsePG.Checked;
   Global.StoreInfo.UseDetectCardInsert := ckbUseDetectCardInsert.Checked;
   Global.StoreInfo.VanCode := Trim(edtVanCode.Text);
+  Global.StoreInfo.SiteCode := Trim(edtSiteCode.Text);
   Global.StoreInfo.VanTID := Trim(edtVanTID.Text);
 
   Global.StoreInfo.PaycoVanTID := Trim(edtPaycoVanTID.Text);
@@ -282,6 +285,7 @@ begin
     WriteBool('StoreInfo', 'UsePG', Global.StoreInfo.UsePG);
     WriteBool('StoreInfo', 'UseDetectCardInsert', Global.StoreInfo.UseDetectCardInsert);
     WriteString('StoreInfo', 'VanCode', Global.StoreInfo.VanCode);
+    WriteString('StoreInfo', 'SiteCode', Global.StoreInfo.SiteCode);
     WriteString('StoreInfo', 'VanTID', Global.StoreInfo.VanTID);
 
     WriteString('PAYCO', 'VanTID', Global.StoreInfo.PaycoVanTID);

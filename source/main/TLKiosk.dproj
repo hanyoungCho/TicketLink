@@ -3,7 +3,7 @@
         <ProjectGuid>{13D801DA-F9F2-4C92-947C-4412FEC6DFB4}</ProjectGuid>
         <MainSource>TLKiosk.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <TargetedPlatforms>1</TargetedPlatforms>
         <AppType>Application</AppType>
         <FrameworkType>VCL</FrameworkType>

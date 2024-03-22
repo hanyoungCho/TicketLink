@@ -18,7 +18,9 @@ uses
   { Chilkat DLL API }
   Chilkat.Global, Chilkat.JsonObject, Chilkat.JsonArray, Chilkat.CkDateTime,
   { VAN Module }
-  uVanDaemonModule, uPaycoNewModule,
+  uVanDaemonModule,
+  //uVanKcpModul,
+  uPaycoNewModule,
   { Project }
   Common.TLReceiptPrintManager, Common.TLTicketPrintManager, Common.TLCipher, Common.SevenZip;
 
@@ -46,7 +48,10 @@ type
     FExternalServiceType: string;
     FExternalServiceTypeName: string;
     FIsDenominationDescriptionExposure: Boolean;
-    FDenominationDescriptionList: TStringList;
+    //FDenominationDescriptionList: TStringList;
+    FProductDenominationId: Integer;
+    FDenominationDescription: string;
+    FDenominationDescriptionEng: string;
     FProductClassType: string;
     FReserveUserName: string;
     FSeatAttributeInfo: string;
@@ -99,7 +104,10 @@ type
     property ExternalServiceType: string read FExternalServiceType write FExternalServiceType;
     property ExternalServiceTypeName: string read FExternalServiceTypeName write SetExternalServiceTypeName;
     property IsDenominationDescriptionExposure: Boolean read FIsDenominationDescriptionExposure write FIsDenominationDescriptionExposure;
-    property DenominationDescriptionList: TStringList read FDenominationDescriptionList write FDenominationDescriptionList;
+    //property DenominationDescriptionList: TStringList read FDenominationDescriptionList write FDenominationDescriptionList;
+    property ProductDenominationId: Integer read FProductDenominationId write FProductDenominationId;
+    property DenominationDescription: string read FDenominationDescription write FDenominationDescription;
+    property DenominationDescriptionEng: string read FDenominationDescriptionEng write FDenominationDescriptionEng;
   end;
 
   { 상품 정보 }
@@ -238,6 +246,7 @@ type
     FDenominLimitCount: Integer;
     FScheduleRemainCount: Integer;
     FDenominDescription: string;
+    FDenominDescriptionEN: string;
     FSoldOut: Boolean;
     FWorking: Boolean;
     FAvailable: Boolean;
@@ -285,6 +294,7 @@ type
     property DenominLimitCount: Integer read FDenominLimitCount write FDenominLimitCount; // 권종별 판매제한 매수
     property ScheduleRemainCount: Integer read FScheduleRemainCount write SetScheduleRemainCount; // 해당회차 판매가능 매수
     property DenominDescription: string read FDenominDescription write FDenominDescription; // 권종별 공지사항
+    property DenominDescriptionEN: string read FDenominDescriptionEN write FDenominDescriptionEN; // 권종별 공지사항
     property Available: Boolean read FAvailable write SetAvailable; // 권종사용가능여부
     property SoldOut: Boolean read FSoldOut write SetSoldOut; // 매진여부
     property LimitCardKcpPaymentYN: Boolean read FLimitCardKcpPaymentYN write FLimitCardKcpPaymentYN default False; //카드 제약 사용 여부
@@ -545,9 +555,17 @@ type
     btn_plus_disabled: TThemeImageInfo;
     btn_ticket_background: TThemeImageInfo;
     btn_ticket_printing_default: TThemeImageInfo;
-    btn_ticket_printing_pressed: TThemeImageInfo;
+    btn_ticket_printing_default_kor: TThemeImageInfo;
+    btn_ticket_printing_default_eng: TThemeImageInfo;
+    btn_ticket_printing_default_jpn: TThemeImageInfo;
+    btn_ticket_printing_default_chn: TThemeImageInfo;
+    //btn_ticket_printing_pressed: TThemeImageInfo;
     btn_ticket_purchase_default: TThemeImageInfo;
-    btn_ticket_purchase_pressed: TThemeImageInfo;
+    btn_ticket_purchase_default_kor: TThemeImageInfo;
+    btn_ticket_purchase_default_eng: TThemeImageInfo;
+    btn_ticket_purchase_default_jpn: TThemeImageInfo;
+    btn_ticket_purchase_default_chn: TThemeImageInfo;
+    //btn_ticket_purchase_pressed: TThemeImageInfo;
 
     ico_alert: TThemeImageInfo;
     ico_back: TThemeImageInfo;
@@ -601,9 +619,11 @@ type
     CounterId: Integer; // 창구ID
     CounterNo: Integer; // 창구번호
     PartnerType: string; // 파트너타입 (AGENCY: 기획사, THEATER: 공연장, RESERVER: 예매처, ONLINE_PARTNER: 온라인파트너, CLUB: 구단)
+    TicketSizeCode: String; // 티켓사이즈코드 (기본티켓 : ticketSize_150,  큰티켓 : ticketSize_187 , 영수증티켓: ticketSize_receipt)
     UsePG: Boolean; // PG결제서비스 사용 여부
     UseDetectCardInsert: Boolean; // 신용카드 삽입 감지 사용 여부
     VanCode: string; // VAN사 코드
+    SiteCode: string; // Site 코드
     VanTID: string; // VAN TID
     PaycoVanTID: string; // PAYCO VAN TID
     PaycoHost: string; // PAYCO 서버
@@ -635,6 +655,8 @@ type
     ShowTicketBuyMenu: Boolean; // 티켓구매 기능 사용 여부
     AllowCreditCard: Boolean; // 신용카드 결제수단 사용 여부
     AllowPAYCO: Boolean; // PAYCO 결제수단 사용 여부
+    AllowAliPay: Boolean; // Alipay 결제수단 사용 여부
+    AllowWechatPay: Boolean; // WechatPay 결제수단 사용 여부
     AllowCouponPrint: Boolean; // 쿠폰 출력 여부(단, 쿠폰 템플릿 정보가 존재할 경우)
   end;
 
@@ -810,6 +832,7 @@ type
     ThemeInfo: TThemeInfo; // 테마 설정 정보
     ReceiptPrintManager: TReceiptPrintManager; // 영수증 프린트 모듈
     VanModule: TVanDaemonModule;
+    //VanModule: TVanKcpDaemon;
 {$IFDEF PAYCO_VCAT_PERSIST}
     PaycoModule: TPaycoNewModule;
 {$ENDIF}
@@ -819,7 +842,8 @@ type
     DenominCategoryList: TObjectList<TDenominCategoryItem>;
     DenominList: TObjectList<TDenominItem>;
     OrderList: TObjectList<TOrderItem>;
-    TicketTemplateList: TArray<TTicketLabelRec>;
+    //TicketTemplateList: TArray<TTicketLabelRec>;
+    TicketTemplateCount: Integer;
 
     ConfigUpdated: string; // 환경설정 최종 업데이트 일시(yyyymmddhhnnss)
     BaseScreenTop: Integer; // 기본 화면 표시 세로 위치
@@ -1232,7 +1256,7 @@ begin
         (Global.StoreInfo.CloseTime >= Global.FormattedCurrentTime)) then
         raise Exception.Create(GetTextLocale(['무인발권기 이용시간', 'Kiosk Available Hours', '無人発券機の利用時間', '无人售票机使用时间']) + _CRLF +
           Global.StoreInfo.OpenTime.Substring(0, 5) + ' ~ ' + Global.StoreInfo.CloseTime.Substring(0, 5));
-
+      { chy test
       // 티켓 프린터 사용 가능 체크
       if Global.TicketPrinter.Enabled then
       begin
@@ -1246,7 +1270,7 @@ begin
           (Global.TicketPrinter.ErrorCode = 0)) then
           raise Exception.Create(Global.TicketPrinter.LastError);
       end;
-
+      }
       // 영수증 프린터 사용 가능 체크
       if Global.ReceiptPrinter.Enabled then
       begin
@@ -1268,11 +1292,28 @@ begin
     end;
   except
     on E: Exception do
+    begin
+      // qa_v0.3_20240216 - 7 page
+      {
       ShowMsgBoxError(GetTextLocale(['무인발권기 이용이 불가합니다.' + _CRLF + '매표소를 이용해 주시기 바랍니다.',
                                      'Ticket Kiosk is currently unavailable.' + _CRLF + 'Please visit the ticket office.',
                                      '無人発券機を利用できません。' + _CRLF + 'チケット売り場をご利用ください。',
                                      '无法使用无人售票机。' + _CRLF + '请前往购票处。']),
         E.Message, [GetTextLocale(['확인', 'Confirm', '確認', '确认'])], 5);
+      }
+
+      case Global.KioskLocale of
+        TKioskLocale.klKorean:
+            ShowMsgBoxError(E.Message, '매표소를 이용해 주시기 바랍니다.', ['확인'], 5);
+        TKioskLocale.klEnglish:
+            ShowMsgBoxError(E.Message, 'Please visit the ticket office.', ['Confirm'], 5);
+        TKioskLocale.klJapanese:
+            ShowMsgBoxError(E.Message, 'チケット売り場をご利用ください。', ['確認'], 5);
+        TKioskLocale.klChinese:
+            ShowMsgBoxError(E.Message, '请前往购票处。', ['确认'], 5);
+      end;
+
+    end;
   end;
 end;
 
@@ -1280,95 +1321,385 @@ function CheckOrderLimit(const ADenonimIndex, AOrderCount: Integer): Boolean;
 var
   LPrimaryColor, LBlackColor, LCondition: string;
   LRoundIndex: Integer;
+  LAlert: string;
+  LMax, LMin, LDouble: Integer;
+  bChk: Boolean;
 begin
   Result := False;
   LPrimaryColor := Color2HTML(Global.ThemeInfo.Colors.primary);
   LBlackColor := Color2HTML(Global.ThemeInfo.Colors.black);
   LRoundIndex := Global.DenominList[ADenonimIndex].RoundIndex;
+
+  {
+  PerMaxCount: Integer         // 예매건당 최대매수
+  PerMinCount: Integer         // 예매건당 최저매수
+  ProductSaleCount: Integer    // 판매가능 매수
+  ScheduleSaleCount: Integer   // 회차당 판매가능 매수
+  PerPersonMaxCount: Integer   // 인당최대매수
+  RoundMaxCount: Integer       // 회차당 최대매수
+  BuyDoubleCount: Integer      // 매수배수
+  DenominLimitCount: Integer   // 권종 판매가능매수
+  ScheduleRemainCount: Integer // 해당스케줄 판매가능매수
+  }
+
+  LDouble := 1; //배수
+  LMax := 10;   //최대
+  LMin := 1;    //최소
+
+  LDouble := Global.DenominList[ADenonimIndex].BuyDoubleCount;
+
+  // 예매건당 최저매수
+  if LMin < Global.DenominList[ADenonimIndex].PerMinCount then
+    LMin := Global.DenominList[ADenonimIndex].PerMinCount;
+
+  // 예매건당 최대매
+  if (LMax > Global.DenominList[ADenonimIndex].PerMaxCount) then
+    LMax := Global.DenominList[ADenonimIndex].PerMaxCount;
+  // 판매가능 매수
+  if (LMax > Global.DenominList[ADenonimIndex].ProductSaleCount) then
+    LMax := Global.DenominList[ADenonimIndex].ProductSaleCount;
+  // 회차당 판매가능 매수
+  if (LMax > Global.DenominList[ADenonimIndex].ScheduleSaleCount) then
+    LMax := Global.DenominList[ADenonimIndex].ScheduleSaleCount;
+  // 인당 최대 매수
+  if (LMax > Global.DenominList[ADenonimIndex].PerPersonMaxCount) then
+    LMax := Global.DenominList[ADenonimIndex].PerPersonMaxCount;
+  // 회차당 최대매수
+  if (LMax > Global.DenominList[ADenonimIndex].RoundMaxCount) then
+    LMax := Global.DenominList[ADenonimIndex].RoundMaxCount;
+  // 권종 판매가능매수
+  if (LMax > Global.DenominList[ADenonimIndex].DenominLimitCount) then
+    LMax := Global.DenominList[ADenonimIndex].DenominLimitCount;
+
+  LCondition := '';
+  if (AOrderCount > Global.RoundList[LRoundIndex].RemainCount) then
+    LCondition := 'remain'
+  else if AOrderCount > LMax then
+    LCondition := 'max'
+  else if AOrderCount < LMin then
+    LCondition := 'min'
+  else
+  begin
+    Result := True;
+    Exit;
+  end;
+
+  try
+    case Global.KioskLocale of
+      TKioskLocale.klKorean:
+        begin
+
+          { 스케쥴조회(POST, /v2/api/schedule/round) }
+          // 회차별 판매 할당 잔여매수
+          if LCondition = 'remain' then
+          begin
+            raise Exception.Create(
+              Format('<FONT color="%s">선택된 총 매수를 기준으로 </FONT> <FONT color="%s">최대 %d매</FONT> <FONT color="%s">까지 선택 가능합니다.</FONT>',
+                [LBlackColor, LPrimaryColor, Global.RoundList[LRoundIndex].RemainCount, LBlackColor]));
+          end;
+
+          { 권종조회(POST, /v2/api/denomination/list) }
+
+          // 매수배수
+          if (LDouble > 1) then
+          begin
+            if (LMin > 1) then  //A매부터 C매 단위로 최대 B매까지 선택 가능합니다.
+            begin
+              raise Exception.Create(
+                Format('<FONT color="%s">%d매</FONT> <FONT color="%s"> 부터 </FONT>' +  // A
+                       '<FONT color="%s">%d매</FONT> <FONT color="%s"> 단위로 최대 </FONT>' + // C
+                       '<FONT color="%s">%d매</FONT> <FONT color="%s">까지 선택 가능합니다.</FONT>', // B
+                       [LPrimaryColor, LMin, LBlackColor,
+                        LPrimaryColor, LDouble, LBlackColor,
+                        LPrimaryColor, LMax, LBlackColor]));
+            end
+            else
+            begin
+              raise Exception.Create(
+                Format('<FONT color="%s">%d매</FONT> <FONT color="%s"> 단위로 최대 </FONT>' + // C
+                       '<FONT color="%s">%d매</FONT> <FONT color="%s">까지 선택 가능합니다.</FONT>', // B
+                       [LPrimaryColor, LDouble, LBlackColor,
+                        LPrimaryColor, LMax, LBlackColor]));
+            end;
+          end
+          else
+          begin
+            // 회차당 최소매수
+            if LCondition = 'min' then
+              raise Exception.Create(Format('<FONT color="%s">%d매</FONT> <FONT color="%s">부터 선택 가능합니다.</FONT>', [LPrimaryColor, LMin, LBlackColor]))
+            else
+              raise Exception.Create(Format('<FONT color="%s">%d매</FONT> <FONT color="%s">까지 선택 가능합니다.</FONT>', [LPrimaryColor, LMax, LBlackColor]));
+          end;
+        end;
+      TKioskLocale.klEnglish:
+        begin
+
+          // 회차별 판매 할당 잔여매수
+          if LCondition = 'remain' then
+            raise Exception.Create(
+              Format('<FONT color="%s">Up to %d</FONT> <FONT color="%s">tickets can be selected, excluding the ones you''ve already chosen.</FONT>',
+                [LPrimaryColor, Global.RoundList[LRoundIndex].RemainCount, LBlackColor]));
+
+          // 매수배수
+          if (LDouble > 1) then
+          begin
+            if (LMin > 1) then //You may select up to B tickets (min A) with increments of C tickets.
+            begin
+              raise Exception.Create(
+                Format('<FONT color="%s">You may select up to </FONT> <FONT color="%s">%d</FONT>' +
+                       '<FONT color="%s"> tickets (min </FONT> <FONT color="%s">%d</FONT>' +
+                       '<FONT color="%s">) with increments of </FONT> <FONT color="%s">%d</FONT> <FONT color="%s"> tickets.</FONT>',
+                       [LBlackColor, LPrimaryColor, LMax,
+                        LBlackColor, LPrimaryColor, LMin,
+                        LBlackColor, LPrimaryColor, LDouble, LBlackColor]));
+
+            end
+            else
+            begin
+              raise Exception.Create(
+                Format('<FONT color="%s">You may select up to </FONT> <FONT color="%s">%d</FONT>' +
+                       '<FONT color="%s"> tickets with increments of </FONT> <FONT color="%s">%d</FONT> <FONT color="%s"> tickets.</FONT>',
+                       [LBlackColor,LPrimaryColor, LMax,
+                        LBlackColor,LPrimaryColor, LDouble, LBlackColor]));
+            end;
+          end
+          else
+          begin
+            // 회차당 최소매수
+            if LCondition = 'min' then
+              raise Exception.Create(Format('<FONT color="%s">You may select </FONT> <FONT color="%s">%d </FONT> <FONT color="%s">or more tickets.</FONT>', [LBlackColor, LPrimaryColor, LMin, LBlackColor]))
+            else
+              raise Exception.Create(Format('<FONT color="%s">Up to %d </FONT> <FONT color="%s">tickets can be selected.</FONT>', [LPrimaryColor, LMax, LBlackColor]));
+          end;
+        end;
+      TKioskLocale.klJapanese:
+        begin
+          // 회차별 판매 할당 잔여매수
+          if LCondition = 'remain' then
+            raise Exception.Create(
+              Format('<FONT color="%s">選択された合計枚数を基準に最大</FONT> <FONT color="%s">%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
+                [LBlackColor, LPrimaryColor, Global.RoundList[LRoundIndex].RemainCount, LBlackColor]));
+
+          if (LDouble > 1) then
+          begin
+            if (LMin > 1) then  // A枚からC枚単位で最大B枚まで選択できます。
+            begin
+              raise Exception.Create(
+                Format('<FONT color="%s">%d</FONT> <FONT color="%s">枚から</FONT>' +
+                       '<FONT color="%s">%d</FONT> <FONT color="%s">枚単位で最大</FONT>' +
+                       '<FONT color="%s">%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
+                       [LPrimaryColor, LMin, LBlackColor,
+                        LPrimaryColor, LDouble, LBlackColor,
+                        LPrimaryColor, LMax, LBlackColor]));
+            end
+            else
+            begin
+              raise Exception.Create(
+                Format('<FONT color="%s">%d</FONT> <FONT color="%s">枚単位で最大</FONT>' +
+                       '<FONT color="%s">%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
+                       [LPrimaryColor, LDouble, LBlackColor,
+                        LPrimaryColor, LMax, LBlackColor]));
+            end;
+          end
+          else
+          begin
+            // 회차당 최소매수
+            if LCondition = 'min' then
+              raise Exception.Create(Format('<FONT color="%s">該当券種は、</FONT> <FONT color="%s">%d </FONT> <FONT color="%s">枚から選択できます。</FONT>', [LBlackColor, LPrimaryColor, LMin, LBlackColor]))
+            else
+              raise Exception.Create(Format('<FONT color="%s">該当する券種は、</FONT> <FONT color="%s">最大%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>', [LBlackColor, LPrimaryColor, LMax, LBlackColor]));
+          end;
+        end;
+      TKioskLocale.klChinese:
+        begin
+          // 회차별 판매 할당 잔여매수
+          if LCondition = 'remain' then
+            raise Exception.Create(
+              Format('<FONT color="%s">最多可选择的票总和为</FONT> <FONT color="%s">%d</FONT> <FONT color="%s">张。</FONT>',
+                [LBlackColor, LPrimaryColor, Global.RoundList[LRoundIndex].RemainCount, LBlackColor]));
+
+          if (LDouble > 1) then
+          begin
+            if (LMin > 1) then // 从A张到以C张为增量，最多可选择B张。
+            begin
+              raise Exception.Create(
+                Format('<FONT color="%s">从</FONT> <FONT color="%s">%d</FONT> <FONT color="%s">张到以</FONT>' +
+                       '<FONT color="%s">%d</FONT> <FONT color="%s">张为增量，最多可选择</FONT>' +
+                       '<FONT color="%s">%d</FONT> <FONT color="%s">张。</FONT>',
+                       [LBlackColor, LPrimaryColor, LMin, LBlackColor,
+                        LPrimaryColor, LDouble, LBlackColor,
+                        LPrimaryColor, LMax, LBlackColor]));
+            end
+            else
+            begin
+              raise Exception.Create(
+                Format('<FONT color="%s">以</FONT> <FONT color="%s">%d</FONT> <FONT color="%s">张为增量，最多可选择</FONT>' +
+                       '<FONT color="%s">%d</FONT> <FONT color="%s">张。</FONT>',
+                       [LBlackColor, LPrimaryColor, LDouble, LBlackColor,
+                        LPrimaryColor, LMax, LBlackColor]));
+            end;
+          end
+          else
+          begin
+            // 회차당 최소매수
+            if LCondition = 'min' then
+              raise Exception.Create(Format('<FONT color="%s">相应门票种类，可从 </FONT> <FONT color="%s">%d</FONT> <FONT color="%s">张开始选择。</FONT>', [LBlackColor, LPrimaryColor, LMin, LBlackColor]))
+            else
+              raise Exception.Create(Format('<FONT color="%s">该门票种类最多可选择</FONT> <FONT color="%s">%d</FONT> <FONT color="%s">张。</FONT>', [LBlackColor, LPrimaryColor, LMax, LBlackColor]));
+            end;
+        end;
+
+    end;
+
+    Result := True;
+  except
+    on E: Exception do
+      case Global.KioskLocale of
+        TKioskLocale.klKorean:
+          begin
+            if LCondition = 'min' then
+              ShowMsgBoxInfo('구매 가능한 최저 매수 미만으로' + _CRLF + ' 선택할 수 없습니다.', E.Message, ['확인'], 5)
+            else
+              ShowMsgBoxInfo('구매 가능한 최대 매수를' + _CRLF + ' 초과하여 선택할 수 없습니다.', E.Message, ['확인'], 5);
+          end;
+        TKioskLocale.klEnglish:
+          begin
+            if LCondition = 'min' then
+              ShowMsgBoxInfo('Sorry. You cannot purchase lower than' + _CRLF + ' the minimum number of tickets.', E.Message, ['Confirm'], 5)
+            else
+              ShowMsgBoxInfo('Sorry. You cannot purchase more than' + _CRLF + ' the maximum number of tickets', E.Message, ['Confirm'], 5);
+          end;
+        TKioskLocale.klJapanese:
+          begin
+            if LCondition = 'min' then
+              ShowMsgBoxInfo('購入可能な最低枚数未満には選択できません。', E.Message, ['確認'], 5)
+            else
+              ShowMsgBoxInfo('購入可能な最大枚数を超えたため、選択できません。', E.Message, ['確認'], 5);
+          end;
+        TKioskLocale.klChinese:
+          begin
+            if LCondition = 'min' then
+              ShowMsgBoxInfo('低于最低可购买票数，无法选择。', E.Message, ['确认'], 5)
+            else
+              ShowMsgBoxInfo('票数超出可购买的上限。', E.Message, ['确认'], 5);
+          end;
+      end;
+  end;
+
+  (*
+
   try
     case Global.KioskLocale of
       TKioskLocale.klKorean:
         begin
           //LCondition := '최대 매수를 초과하여';
           LCondition := 'max';
+
+          { 스케쥴조회(POST, /v2/api/schedule/round) }
+          // 회차별 판매 할당 잔여매수
+          if (AOrderCount > Global.RoundList[LRoundIndex].RemainCount) then
+            raise Exception.Create(
+              Format('<FONT color="%s">선택된 총 매수를 기준으로 </FONT> <FONT color="%s">최대 %d매</FONT> <FONT color="%s">까지 선택 가능합니다.</FONT>',
+                [LBlackColor, LPrimaryColor, Global.RoundList[LRoundIndex].RemainCount, LBlackColor]));
+
+          { 권종조회(POST, /v2/api/denomination/list) }
           // 최대 10매
-          if (AOrderCount > 10) then
-            raise Exception.Create(
-              Format('<FONT color="%s">해당 권종은</FONT> <FONT color="%s">%d매까지</FONT> <FONT color="%s">선택 가능합니다.</FONT>',
-                [LBlackColor, LPrimaryColor, 10, LBlackColor]));
-          // 상품당 판매가능 매수
-          if (AOrderCount > Global.DenominList[ADenonimIndex].ProductSaleCount) then
-            raise Exception.Create(
-              Format('<FONT color="%s">해당 권종은</FONT> <FONT color="%s">%d매까지</FONT> <FONT color="%s">선택 가능합니다.</FONT>',
-                [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].ProductSaleCount, LBlackColor]));
-          // 회차당 판매가능 매수
-          if (AOrderCount > Global.DenominList[ADenonimIndex].ScheduleSaleCount) then
-            raise Exception.Create(
-              Format('<FONT color="%s">해당 권종은</FONT> <FONT color="%s">%d매까지</FONT> <FONT color="%s">선택 가능합니다.</FONT>',
-                [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].ScheduleSaleCount, LBlackColor]));
-          // 인당 최대 매수
-          if (AOrderCount > Global.DenominList[ADenonimIndex].PerPersonMaxCount) then
-            raise Exception.Create(
-              Format('<FONT color="%s">해당 권종은</FONT> <FONT color="%s">%d매까지</FONT> <FONT color="%s">선택 가능합니다.</FONT>',
-                [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].PerPersonMaxCount, LBlackColor]));
-          // 회차당 최대매수
-          if (AOrderCount > Global.DenominList[ADenonimIndex].PerMaxCount) then
-            raise Exception.Create(
-              Format('<FONT color="%s">해당 권종은</FONT> <FONT color="%s">%d매까지</FONT> <FONT color="%s">선택 가능합니다.</FONT>',
-                [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].PerMaxCount, LBlackColor]));
+
+          // 매수배수
+          if (Global.DenominList[ADenonimIndex].BuyDoubleCount > 1) then
+          begin
+            if (AOrderCount > FPerMaxCount) then
+              LAlert := Format('<FONT color="%s">%d매</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + ' 단위로 최대 ' +
+                        Format('<FONT color="%s">%d매</FONT>', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) + '까지 선택 가능합니다.';
+            if (FSelectedCount < FPerMinCount) and (FSelectedCount > FPerMaxCount) then  //A매부터 C매 단위로 최대 B매까지 선택 가능합니다.
+              LAlert := Format('<FONT color="%s">%d매</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMinCount]) + ' 부터 ' +  // A
+                        Format('<FONT color="%s">%d매</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FBuyDoubleCount]) + ' 단위로 최대 ' + // C
+                        Format('<FONT color="%s">%d매</FONT> ', [Color2HTML(Global.ThemeInfo.Colors.primary), FPerMaxCount]) + '까지 선택 가능합니다.'; // B
+          end;
+
           // 회차당 최소매수
           if (AOrderCount < Global.DenominList[ADenonimIndex].PerMinCount) then
           begin
             //LCondition := '최저 매수 미만으로';
             LCondition := 'min';
             raise Exception.Create(
-              Format('<FONT color="%s">해당 권종은</FONT> <FONT color="%s">%d매부터</FONT> <FONT color="%s">선택 가능합니다.</FONT>',
+              Format('<FONT color="%s">해당 권종은</FONT> <FONT color="%s">%d매</FONT> <FONT color="%s">부터 선택 가능합니다.</FONT>',
                 [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].PerMinCount, LBlackColor]));
           end;
+
+
+          if (AOrderCount > 10) then
+            raise Exception.Create(
+              Format('<FONT color="%s">해당 권종은</FONT> <FONT color="%s">%d매</FONT> <FONT color="%s">까지 선택 가능합니다.</FONT>',
+                [LBlackColor, LPrimaryColor, 10, LBlackColor]));
+          // 상품당 판매가능 매수
+          if (AOrderCount > Global.DenominList[ADenonimIndex].ProductSaleCount) then
+            raise Exception.Create(
+              Format('<FONT color="%s">해당 권종은</FONT> <FONT color="%s">%d매</FONT> <FONT color="%s">까지 선택 가능합니다.</FONT>',
+                [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].ProductSaleCount, LBlackColor]));
+          // 회차당 판매가능 매수
+          if (AOrderCount > Global.DenominList[ADenonimIndex].ScheduleSaleCount) then
+            raise Exception.Create(
+              Format('<FONT color="%s">해당 권종은</FONT> <FONT color="%s">%d매</FONT> <FONT color="%s">까지 선택 가능합니다.</FONT>',
+                [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].ScheduleSaleCount, LBlackColor]));
+          // 인당 최대 매수
+          if (AOrderCount > Global.DenominList[ADenonimIndex].PerPersonMaxCount) then
+            raise Exception.Create(
+              Format('<FONT color="%s">해당 권종은</FONT> <FONT color="%s">%d매</FONT> <FONT color="%s">까지 선택 가능합니다.</FONT>',
+                [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].PerPersonMaxCount, LBlackColor]));
+          // 회차당 최대매수
+          if (AOrderCount > Global.DenominList[ADenonimIndex].PerMaxCount) then
+            raise Exception.Create(
+              Format('<FONT color="%s">해당 권종은</FONT> <FONT color="%s">%d매</FONT> <FONT color="%s">까지 선택 가능합니다.</FONT>',
+                [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].PerMaxCount, LBlackColor]));
+
           // 회당 구매제약수
           if (AOrderCount > Global.DenominList[ADenonimIndex].RoundMaxCount) then
             raise Exception.Create(
-              Format('<FONT color="%s">해당 권종은</FONT> <FONT color="%s">%d매까지</FONT> <FONT color="%s">선택 가능합니다.</FONT>',
+              Format('<FONT color="%s">해당 권종은</FONT> <FONT color="%s">%d매</FONT> <FONT color="%s">까지 선택 가능합니다.</FONT>',
                 [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].RoundMaxCount, LBlackColor]));
-          // 회차별 판매 할당 잔여매수
-          if (AOrderCount > Global.RoundList[LRoundIndex].RemainCount) then
-            raise Exception.Create(
-              Format('<FONT color="%s">선택된 총 매수를 기준으로 최대</FONT> <FONT color="%s">%d매까지</FONT> <FONT color="%s">선택 가능합니다.</FONT>',
-                [LBlackColor, LPrimaryColor, Global.RoundList[LRoundIndex].RemainCount, LBlackColor]));
+
           // 권종별 판매제한 매수
           if (AOrderCount > Global.DenominList[ADenonimIndex].DenominLimitCount) then
             raise Exception.Create(
-              Format('<FONT color="%s">해당 권종은</FONT> <FONT color="%s">%d매까지</FONT> <FONT color="%s">선택 가능합니다.</FONT>',
+              Format('<FONT color="%s">해당 권종은</FONT> <FONT color="%s">%d매</FONT> <FONT color="%s">까지 선택 가능합니다.</FONT>',
                 [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].DenominLimitCount, LBlackColor]));
         end;
       TKioskLocale.klEnglish:
         begin
           LCondition := 'max';
+
+          // 회차별 판매 할당 잔여매수
+          if (AOrderCount > Global.RoundList[LRoundIndex].RemainCount) then
+            raise Exception.Create(
+              Format('<FONT color="%s">Up to %d</FONT> <FONT color="%s">tickets can be selected, excluding the ones you''ve already chosen.</FONT>',
+                [LPrimaryColor, Global.RoundList[LRoundIndex].RemainCount, LBlackColor]));
+
           // 최대 10매
           if (AOrderCount > 10) then
             raise Exception.Create(
-              Format('<FONT color="%s">Up to </FONT> <FONT color="%s">%d </FONT> <FONT color="%s">tickets can be selected.</FONT>',
-                [LBlackColor, LPrimaryColor, 10, LBlackColor]));
+              Format('<FONT color="%s">Up to %d </FONT> <FONT color="%s">tickets can be selected.</FONT>',
+                [LPrimaryColor, 10, LBlackColor]));
           // 상품당 판매가능 매수
           if (AOrderCount > Global.DenominList[ADenonimIndex].ProductSaleCount) then
             raise Exception.Create(
-              Format('<FONT color="%s">Up to </FONT> <FONT color="%s">%d </FONT> <FONT color="%s">tickets can be selected.</FONT>',
-                [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].ProductSaleCount, LBlackColor]));
+              Format('<FONT color="%s">Up to %d </FONT> <FONT color="%s">tickets can be selected.</FONT>',
+                [LPrimaryColor, Global.DenominList[ADenonimIndex].ProductSaleCount, LBlackColor]));
           // 회차당 판매가능 매수
           if (AOrderCount > Global.DenominList[ADenonimIndex].ScheduleSaleCount) then
             raise Exception.Create(
-              Format('<FONT color="%s">Up to </FONT> <FONT color="%s">%d </FONT> <FONT color="%s">tickets can be selected.</FONT>',
-                [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].ScheduleSaleCount, LBlackColor]));
+              Format('<FONT color="%s">Up to %d </FONT> <FONT color="%s">tickets can be selected.</FONT>',
+                [LPrimaryColor, Global.DenominList[ADenonimIndex].ScheduleSaleCount, LBlackColor]));
           // 인당 최대 매수
           if (AOrderCount > Global.DenominList[ADenonimIndex].PerPersonMaxCount) then
             raise Exception.Create(
-              Format('<FONT color="%s">Up to </FONT> <FONT color="%s">%d </FONT> <FONT color="%s">tickets can be selected.</FONT>',
-                [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].PerPersonMaxCount, LBlackColor]));
+              Format('<FONT color="%s">Up to %d </FONT> <FONT color="%s">tickets can be selected.</FONT>',
+                [LPrimaryColor, Global.DenominList[ADenonimIndex].PerPersonMaxCount, LBlackColor]));
           // 회차당 최대매수
           if (AOrderCount > Global.DenominList[ADenonimIndex].PerMaxCount) then
             raise Exception.Create(
-              Format('<FONT color="%s">Up to </FONT> <FONT color="%s">%d </FONT> <FONT color="%s">tickets can be selected.</FONT>',
-                [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].PerMaxCount, LBlackColor]));
+              Format('<FONT color="%s">Up to %d </FONT> <FONT color="%s">tickets can be selected.</FONT>',
+                [LPrimaryColor, Global.DenominList[ADenonimIndex].PerMaxCount, LBlackColor]));
           // 회차당 최소매수
           if (AOrderCount < Global.DenominList[ADenonimIndex].PerMinCount) then
           begin
@@ -1380,46 +1711,50 @@ begin
           // 회당 구매제약수
           if (AOrderCount > Global.DenominList[ADenonimIndex].RoundMaxCount) then
             raise Exception.Create(
-              Format('<FONT color="%s">Up to </FONT> <FONT color="%s">%d </FONT> <FONT color="%s">tickets can be selected.</FONT>',
-                [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].RoundMaxCount, LBlackColor]));
-          // 회차별 판매 할당 잔여매수
-          if (AOrderCount > Global.RoundList[LRoundIndex].RemainCount) then
-            raise Exception.Create(
-              Format('<FONT color="%s">Up to </FONT> <FONT color="%s">%d</FONT> <FONT color="%s">tickets can be selected, excluding the ones you''ve already chosen.</FONT>',
-                [LBlackColor, LPrimaryColor, Global.RoundList[LRoundIndex].RemainCount, LBlackColor]));
+              Format('<FONT color="%s">Up to %d </FONT> <FONT color="%s">tickets can be selected.</FONT>',
+                [LPrimaryColor, Global.DenominList[ADenonimIndex].RoundMaxCount, LBlackColor]));
+
           // 권종별 판매제한 매수
           if (AOrderCount > Global.DenominList[ADenonimIndex].DenominLimitCount) then
             raise Exception.Create(
-              Format('<FONT color="%s">Up to </FONT> <FONT color="%s">%d </FONT> <FONT color="%s">tickets can be selected.</FONT>',
-                [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].DenominLimitCount, LBlackColor]));
+              Format('<FONT color="%s">Up to %d </FONT> <FONT color="%s">tickets can be selected.</FONT>',
+                [LPrimaryColor, Global.DenominList[ADenonimIndex].DenominLimitCount, LBlackColor]));
         end;
       TKioskLocale.klJapanese:
         begin
           LCondition := 'max';
+
+          // 회차별 판매 할당 잔여매수
+          if (AOrderCount > Global.RoundList[LRoundIndex].RemainCount) then
+            raise Exception.Create(
+              Format('<FONT color="%s">選択された合計枚数を基準に最大</FONT> <FONT color="%s">%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
+                [LBlackColor, LPrimaryColor, Global.RoundList[LRoundIndex].RemainCount, LBlackColor]));
+
+
           // 최대 10매
           if (AOrderCount > 10) then
             raise Exception.Create(
-              Format('<FONT color="%s">該当する券種は、最大</FONT> <FONT color="%s">%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
+              Format('<FONT color="%s">該当する券種は、</FONT> <FONT color="%s">最大%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
                 [LBlackColor, LPrimaryColor, 10, LBlackColor]));
           // 상품당 판매가능 매수
           if (AOrderCount > Global.DenominList[ADenonimIndex].ProductSaleCount) then
             raise Exception.Create(
-              Format('<FONT color="%s">該当する券種は、最大</FONT> <FONT color="%s">%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
+              Format('<FONT color="%s">該当する券種は、</FONT> <FONT color="%s">最大%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
                 [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].ProductSaleCount, LBlackColor]));
           // 회차당 판매가능 매수
           if (AOrderCount > Global.DenominList[ADenonimIndex].ScheduleSaleCount) then
             raise Exception.Create(
-              Format('<FONT color="%s">該当する券種は、最大</FONT> <FONT color="%s">%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
+              Format('<FONT color="%s">該当する券種は、</FONT> <FONT color="%s">最大%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
                 [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].ScheduleSaleCount, LBlackColor]));
           // 인당 최대 매수
           if (AOrderCount > Global.DenominList[ADenonimIndex].PerPersonMaxCount) then
             raise Exception.Create(
-              Format('<FONT color="%s">該当する券種は、最大</FONT> <FONT color="%s">%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
+              Format('<FONT color="%s">該当する券種は、</FONT> <FONT color="%s">最大%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
                 [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].PerPersonMaxCount, LBlackColor]));
           // 회차당 최대매수
           if (AOrderCount > Global.DenominList[ADenonimIndex].PerMaxCount) then
             raise Exception.Create(
-              Format('<FONT color="%s">該当する券種は、最大</FONT> <FONT color="%s">%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
+              Format('<FONT color="%s">該当する券種は、</FONT> <FONT color="%s">最大%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
                 [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].PerMaxCount, LBlackColor]));
           // 회차당 최소매수
           if (AOrderCount < Global.DenominList[ADenonimIndex].PerMinCount) then
@@ -1432,13 +1767,9 @@ begin
           // 회당 구매제약수
           if (AOrderCount > Global.DenominList[ADenonimIndex].RoundMaxCount) then
             raise Exception.Create(
-              Format('<FONT color="%s">該当する券種は、最大</FONT> <FONT color="%s">%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
+              Format('<FONT color="%s">該当する券種は、</FONT> <FONT color="%s">最大%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
                 [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].RoundMaxCount, LBlackColor]));
-          // 회차별 판매 할당 잔여매수
-          if (AOrderCount > Global.RoundList[LRoundIndex].RemainCount) then
-            raise Exception.Create(
-              Format('<FONT color="%s">選択された合計枚数を基準に最大</FONT> <FONT color="%s">%d</FONT> <FONT color="%s">枚まで選択できます。</FONT>',
-                [LBlackColor, LPrimaryColor, Global.RoundList[LRoundIndex].RemainCount, LBlackColor]));
+
           // 권종별 판매제한 매수
           if (AOrderCount > Global.DenominList[ADenonimIndex].DenominLimitCount) then
             raise Exception.Create(
@@ -1448,6 +1779,13 @@ begin
       TKioskLocale.klChinese:
         begin
           LCondition := 'max';
+
+          // 회차별 판매 할당 잔여매수
+          if (AOrderCount > Global.RoundList[LRoundIndex].RemainCount) then
+            raise Exception.Create(
+              Format('<FONT color="%s">最多可选择的票总和为</FONT> <FONT color="%s">%d</FONT> <FONT color="%s">张。</FONT>',
+                [LBlackColor, LPrimaryColor, Global.RoundList[LRoundIndex].RemainCount, LBlackColor]));
+
           // 최대 10매
           if (AOrderCount > 10) then
             raise Exception.Create(
@@ -1486,11 +1824,7 @@ begin
             raise Exception.Create(
               Format('<FONT color="%s">该门票种类最多可选择</FONT> <FONT color="%s">%d</FONT> <FONT color="%s">张。</FONT>',
                 [LBlackColor, LPrimaryColor, Global.DenominList[ADenonimIndex].RoundMaxCount, LBlackColor]));
-          // 회차별 판매 할당 잔여매수
-          if (AOrderCount > Global.RoundList[LRoundIndex].RemainCount) then
-            raise Exception.Create(
-              Format('<FONT color="%s">最多可选择的票总和为</FONT> <FONT color="%s">%d</FONT> <FONT color="%s">张。</FONT>',
-                [LBlackColor, LPrimaryColor, Global.RoundList[LRoundIndex].RemainCount, LBlackColor]));
+
           // 권종별 판매제한 매수
           if (AOrderCount > Global.DenominList[ADenonimIndex].DenominLimitCount) then
             raise Exception.Create(
@@ -1507,16 +1841,16 @@ begin
         TKioskLocale.klKorean:
           begin
             if LCondition = 'min' then
-              ShowMsgBoxInfo('구매 가능한 최저 매수 미만으로 선택할 수 없습니다.', E.Message, ['확인'], 5)
+              ShowMsgBoxInfo('구매 가능한 최저 매수 미만으로' + _CRLF + ' 선택할 수 없습니다.', E.Message, ['확인'], 5)
             else
-              ShowMsgBoxInfo('구매 가능한 최대 매수를 초과하여 선택할 수 없습니다.', E.Message, ['확인'], 5);
+              ShowMsgBoxInfo('구매 가능한 최대 매수를' + _CRLF + ' 초과하여 선택할 수 없습니다.', E.Message, ['확인'], 5);
           end;
         TKioskLocale.klEnglish:
           begin
             if LCondition = 'min' then
-              ShowMsgBoxInfo('Sorry. You cannot purchase lower than the minimum number of tickets.', E.Message, ['Confirm'], 5)
+              ShowMsgBoxInfo('Sorry. You cannot purchase lower than' + _CRLF + ' the minimum number of tickets.', E.Message, ['Confirm'], 5)
             else
-              ShowMsgBoxInfo('Sorry. You cannot purchase more than the maximum number of tickets', E.Message, ['Confirm'], 5);
+              ShowMsgBoxInfo('Sorry. You cannot purchase more than' + _CRLF + ' the maximum number of tickets', E.Message, ['Confirm'], 5);
           end;
         TKioskLocale.klJapanese:
           begin
@@ -1534,6 +1868,7 @@ begin
           end;
       end;
   end;
+  *)
 end;
 
 function GetTextLocale(JO: HCkJsonObject): string;
@@ -1604,7 +1939,7 @@ begin
   inherited;
 
   VanModule := TVanDaemonModule.Create;
-  VanModule.HideLegacyForm := True; //VCAT의 카드 삽입대기 화면 감춤
+  //VanModule := TVanKcpDaemon.Create;
 
 {$IFDEF PAYCO_VCAT_PERSIST}
   PaycoModule := TPaycoNewModule.Create;
@@ -1803,6 +2138,7 @@ begin
       StoreInfo.UseDetectCardInsert := ReadBool('StoreInfo', 'UseDetectCardInsert', True);
       StoreInfo.VanCode := ReadString('StoreInfo', 'VanCode', CCC_KCP_VAN_CD);
       StoreInfo.VanTID := ReadString('StoreInfo', 'VanTID', '');
+      StoreInfo.SiteCode := ReadString('StoreInfo', 'SiteCode', '');
 
       StoreInfo.PaycoVanTID := ReadString('PAYCO', 'VanTID', '');
       StoreInfo.PaycoHost := ReadString('PAYCO', 'Host', '');
@@ -2020,20 +2356,11 @@ begin
     NFCReader.Baudrate := ReadInteger('NFCReader', 'Baudrate', 9600);
 
     { 영수증 프린터 }
-    {$IFDEF RELEASE}
     ReceiptPrinter.Enabled := ReadBool('ReceiptPrinter', 'Enabled', False);
     ReceiptPrinter.DeviceId := ReadInteger('ReceiptPrinter', 'DeviceId', 0);
     ReceiptPrinter.Copies := ReadInteger('ReceiptPrinter', 'Copies', 1);
     ReceiptPrinter.Port := ReadInteger('ReceiptPrinter', 'Port', 0);
     ReceiptPrinter.Baudrate := ReadInteger('ReceiptPrinter', 'Baudrate', 9600);
-    {$ENDIF}
-    {$IFDEF DEBUG}
-    ReceiptPrinter.Enabled := False;
-    ReceiptPrinter.DeviceId := 1;
-    ReceiptPrinter.Copies := 1;
-    ReceiptPrinter.Port := 3;
-    ReceiptPrinter.Baudrate := 9600;
-    {$ENDIF}
     ReceiptPrinter.CheckDevicePerEach := ReadBool('ReceiptPrinter', 'CheckDevicePerEach', False);
     ReceiptPrinter.CheckStatusAll := ReadBool('ReceiptPrinter', 'CheckStatusAll', False);
     ReceiptPrinter.CheckStatusPrinter := ReadBool('ReceiptPrinter', 'CheckStatusPrinter', False);
@@ -2042,20 +2369,11 @@ begin
     ReceiptPrinter.CheckStatusPaper := ReadBool('ReceiptPrinter', 'CheckStatusPaper', True);
 
     { 티켓 프린터 }
-    {$IFDEF RELEASE}
     TicketPrinter.Enabled := ReadBool('TicketPrinter', 'Enabled', False);
     TicketPrinter.DeviceId := ReadInteger('TicketPrinter', 'DeviceId', 0);
     TicketPrinter.Copies := ReadInteger('TicketPrinter', 'Copies', 1);
     TicketPrinter.Port := ReadInteger('TicketPrinter', 'Port', 0);
     TicketPrinter.Baudrate := ReadInteger('TicketPrinter', 'Baudrate', 9600);
-    {$ENDIF}
-    {$IFDEF DEBUG}
-    TicketPrinter.Enabled := True;
-    TicketPrinter.DeviceId := 0;
-    TicketPrinter.Copies := 1;
-    TicketPrinter.Port := 3;
-    TicketPrinter.Baudrate := 9600;
-    {$ENDIF}
     TicketPrinter.CheckDevicePerEach := ReadBool('TicketPrinter', 'CheckDevicePerEach', False);
     TicketPrinter.CheckStatusAll := ReadBool('TicketPrinter', 'CheckStatusAll', False);
     TicketPrinter.CheckStatusPrinter := ReadBool('TicketPrinter', 'CheckStatusPrinter', False);
@@ -2323,9 +2641,17 @@ begin
     btn_plus_disabled.Stream := TMemoryStream.Create;
     btn_ticket_background.Stream := TMemoryStream.Create;
     btn_ticket_printing_default.Stream := TMemoryStream.Create;
-    btn_ticket_printing_pressed.Stream := TMemoryStream.Create;
+    btn_ticket_printing_default_kor.Stream := TMemoryStream.Create;
+    btn_ticket_printing_default_eng.Stream := TMemoryStream.Create;
+    btn_ticket_printing_default_jpn.Stream := TMemoryStream.Create;
+    btn_ticket_printing_default_chn.Stream := TMemoryStream.Create;
+    //btn_ticket_printing_pressed.Stream := TMemoryStream.Create;
     btn_ticket_purchase_default.Stream := TMemoryStream.Create;
-    btn_ticket_purchase_pressed.Stream := TMemoryStream.Create;
+    btn_ticket_purchase_default_kor.Stream := TMemoryStream.Create;
+    btn_ticket_purchase_default_eng.Stream := TMemoryStream.Create;
+    btn_ticket_purchase_default_jpn.Stream := TMemoryStream.Create;
+    btn_ticket_purchase_default_chn.Stream := TMemoryStream.Create;
+    //btn_ticket_purchase_pressed.Stream := TMemoryStream.Create;
 
     ico_alert.Stream := TMemoryStream.Create;
     ico_back.Stream := TMemoryStream.Create;
@@ -2396,9 +2722,17 @@ begin
     FreeAndNil(btn_plus_disabled.Stream);
     FreeAndNil(btn_ticket_background.Stream);
     FreeAndNil(btn_ticket_printing_default.Stream);
-    FreeAndNil(btn_ticket_printing_pressed.Stream);
+    FreeAndNil(btn_ticket_printing_default_kor.Stream);
+    FreeAndNil(btn_ticket_printing_default_eng.Stream);
+    FreeAndNil(btn_ticket_printing_default_jpn.Stream);
+    FreeAndNil(btn_ticket_printing_default_chn.Stream);
+    //FreeAndNil(btn_ticket_printing_pressed.Stream);
     FreeAndNil(btn_ticket_purchase_default.Stream);
-    FreeAndNil(btn_ticket_purchase_pressed.Stream);
+    FreeAndNil(btn_ticket_purchase_default_kor.Stream);
+    FreeAndNil(btn_ticket_purchase_default_eng.Stream);
+    FreeAndNil(btn_ticket_purchase_default_jpn.Stream);
+    FreeAndNil(btn_ticket_purchase_default_chn.Stream);
+    //FreeAndNil(btn_ticket_purchase_pressed.Stream);
     FreeAndNil(ico_alert.Stream);
     FreeAndNil(ico_back.Stream);
     FreeAndNil(ico_locale_chn.Stream);
@@ -2630,9 +2964,17 @@ begin
         btn_plus_disabled.FileName := CkJsonObject__stringOf(JO, 'images.btn_plus_disabled');
         btn_ticket_background.FileName := CkJsonObject__stringOf(JO, 'images.btn_ticket_background');
         btn_ticket_printing_default.FileName := CkJsonObject__stringOf(JO, 'images.btn_ticket_printing_default');
-        btn_ticket_printing_pressed.FileName := CkJsonObject__stringOf(JO, 'images.btn_ticket_printing_pressed');
+        btn_ticket_printing_default_kor.FileName := CkJsonObject__stringOf(JO, 'images.btn_ticket_printing_default_kor');
+        btn_ticket_printing_default_eng.FileName := CkJsonObject__stringOf(JO, 'images.btn_ticket_printing_default_eng');
+        btn_ticket_printing_default_jpn.FileName := CkJsonObject__stringOf(JO, 'images.btn_ticket_printing_default_jpn');
+        btn_ticket_printing_default_chn.FileName := CkJsonObject__stringOf(JO, 'images.btn_ticket_printing_default_chn');
+        //btn_ticket_printing_pressed.FileName := CkJsonObject__stringOf(JO, 'images.btn_ticket_printing_pressed');
         btn_ticket_purchase_default.FileName := CkJsonObject__stringOf(JO, 'images.btn_ticket_purchase_default');
-        btn_ticket_purchase_pressed.FileName := CkJsonObject__stringOf(JO, 'images.btn_ticket_purchase_pressed');
+        btn_ticket_purchase_default_kor.FileName := CkJsonObject__stringOf(JO, 'images.btn_ticket_purchase_default_kor');
+        btn_ticket_purchase_default_eng.FileName := CkJsonObject__stringOf(JO, 'images.btn_ticket_purchase_default_eng');
+        btn_ticket_purchase_default_jpn.FileName := CkJsonObject__stringOf(JO, 'images.btn_ticket_purchase_default_jpn');
+        btn_ticket_purchase_default_chn.FileName := CkJsonObject__stringOf(JO, 'images.btn_ticket_purchase_default_chn');
+        //btn_ticket_purchase_pressed.FileName := CkJsonObject__stringOf(JO, 'images.btn_ticket_purchase_pressed');
         ico_alert.FileName := CkJsonObject__stringOf(JO, 'images.ico_alert');
         ico_back.FileName := CkJsonObject__stringOf(JO, 'images.ico_back');
         ico_calendar.FileName := CkJsonObject__stringOf(JO, 'images.ico_calendar');
@@ -2669,9 +3011,17 @@ begin
         GetImage(ZA, btn_plus_disabled);
         GetImage(ZA, btn_ticket_background);
         GetImage(ZA, btn_ticket_printing_default);
-        GetImage(ZA, btn_ticket_printing_pressed);
+        GetImage(ZA, btn_ticket_printing_default_kor);
+        GetImage(ZA, btn_ticket_printing_default_eng);
+        GetImage(ZA, btn_ticket_printing_default_jpn);
+        GetImage(ZA, btn_ticket_printing_default_chn);
+        //GetImage(ZA, btn_ticket_printing_pressed);
         GetImage(ZA, btn_ticket_purchase_default);
-        GetImage(ZA, btn_ticket_purchase_pressed);
+        GetImage(ZA, btn_ticket_purchase_default_kor);
+        GetImage(ZA, btn_ticket_purchase_default_eng);
+        GetImage(ZA, btn_ticket_purchase_default_jpn);
+        GetImage(ZA, btn_ticket_purchase_default_chn);
+        //GetImage(ZA, btn_ticket_purchase_pressed);
 
         GetImage(ZA, ico_alert);
         GetImage(ZA, ico_back);
@@ -2800,9 +3150,17 @@ begin
     btn_plus_pressed.Stream.Clear;
     btn_ticket_background.Stream.Clear;
     btn_ticket_printing_default.Stream.Clear;
-    btn_ticket_printing_pressed.Stream.Clear;
+    btn_ticket_printing_default_kor.Stream.Clear;
+    btn_ticket_printing_default_eng.Stream.Clear;
+    btn_ticket_printing_default_jpn.Stream.Clear;
+    btn_ticket_printing_default_chn.Stream.Clear;
+    //btn_ticket_printing_pressed.Stream.Clear;
     btn_ticket_purchase_default.Stream.Clear;
-    btn_ticket_purchase_pressed.Stream.Clear;
+    btn_ticket_purchase_default_kor.Stream.Clear;
+    btn_ticket_purchase_default_eng.Stream.Clear;
+    btn_ticket_purchase_default_jpn.Stream.Clear;
+    btn_ticket_purchase_default_chn.Stream.Clear;
+    //btn_ticket_purchase_pressed.Stream.Clear;
     ico_alert.Stream.Clear;
     ico_back.Stream.Clear;
     ico_calendar.Stream.Clear;
@@ -2958,7 +3316,7 @@ begin
   FWorking := False;
   TicketNoList := TStringList.Create;
   BasePanel := TAdvSmoothPanel.Create(nil);
-  DenominationDescriptionList := TStringList.Create;
+  //DenominationDescriptionList := TStringList.Create;
   with BasePanel do
   begin
     DoubleBuffered := True;
@@ -3085,8 +3443,13 @@ begin
     Top := 200;
     Left := 296;
     Height := 36;
-    Width := 128;
-//    Caption := '예매번호';
+
+    //Width := 128;
+    if (Global.KioskLocale = TKioskLocale.klEnglish) then
+      Width := 158
+    else
+      Width := 128;
+
     Color := Global.ThemeInfo.Colors.background1;
     Font.Charset := HANGEUL_CHARSET;
     Font.Name := 'Noto Sans CJK KR DemiLight';
@@ -3106,7 +3469,13 @@ begin
     Alignment := taLeftJustify;
     AutoSize := False;
     Top := 200;
-    Left := 417;
+
+    //Left := 417;
+    if (Global.KioskLocale = TKioskLocale.klEnglish) then
+      Left := 467
+    else
+      Left := 417;
+
     Height := 36;
     Width := 290;
     Caption := '';
@@ -3284,7 +3653,7 @@ begin
   ReserveSiteLabel.Free;
   PrintButton.Free;
   BasePanel.Free;
-  DenominationDescriptionList.Free;
+  //DenominationDescriptionList.Free;
 
   inherited;
 end;
@@ -3315,13 +3684,13 @@ begin
   ProductNameLabel.AutoSize := False;
   ProductNameLabel.Caption := LProdName;
   ProductNameLabel.AutoSize := True;
-  ReserveTimeLabel.Caption := Format('%s | %s', [ProductDateTime, LProdName]);
+  //ReserveTimeLabel.Caption := Format('%s | %s', [ProductDateTime, LProdName]);
 end;
 
 procedure TReserveItem.SetProductDateTime(const AProductDateTime: string);
 begin
   FProductDateTime := AProductDateTime;
-  ReserveTimeLabel.Caption := Format('%s | %s', [FProductDateTime, PlaceName]);
+  ReserveTimeLabel.Caption := Format('%s | %s', [FProductDateTime, GetTextLocale([PlaceName, PlaceNameEN])]);
 end;
 
 procedure TReserveItem.SetReserveNo(const AReserveNo: Int64);
@@ -3345,7 +3714,10 @@ end;
 procedure TReserveItem.SetReserveCount(const AReserveCount: Integer);
 begin
   FReserveCount := AReserveCount;
-  ReserveQtyLabel.Caption := Format('%d 매', [FReserveCount]);
+  if (Global.KioskLocale = TKioskLocale.klKorean) then
+    ReserveQtyLabel.Caption := Format('%d 매', [FReserveCount])
+  else
+    ReserveQtyLabel.Caption := Format('%d', [FReserveCount]);
 end;
 
 procedure TReserveItem.SetExternalServiceTypeName(const AExternalServiceTypeName: string);
@@ -3543,9 +3915,9 @@ begin
     AutoSize := False;
     Color := Global.ThemeInfo.Colors.panel_face_default;
     Top := 53;
-    Left := 656;
+    Left := 556;    // qa_v0.3_20240216 - 8 page
     Height := 70;
-    Width := 250;
+    Width := 350;
     Font.Charset := HANGEUL_CHARSET;
     Font.Name := 'Noto Sans CJK KR Bold';
     Font.Color := Global.ThemeInfo.Colors.black;

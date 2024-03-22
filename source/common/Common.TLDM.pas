@@ -17,7 +17,9 @@ uses
   { TMS }
   AdvMenus,
   { VAN }
-  uVanDaemonModule, uPaycoNewModule;
+  uVanDaemonModule,
+  uPaycoNewModule,
+  uVanType;
 
 {$I common.TLGlobal.inc}
 
@@ -135,6 +137,7 @@ type
 
     function DoApproveCARD(const AReceiptNo: string; const APaymentAmt: Integer; var AStoredData: Boolean; var AResMsg: string): Boolean;
     function DoApprovePAYCO(const AReceiptNo: string; const APaymentAmt: Integer; const APinCode: string; var AStoredData: Boolean; var AResMsg: string): Boolean;
+    function DoApproveMobile(const AReceiptNo: string; const APaymentAmt: Integer; const APaymentType: string; const ABarcode: string; var AStoredData: Boolean; var AResMsg: string): Boolean;
 {$IFDEF PAYCO_VCAT_PERSIST}
     function DoApprovePAYCO_VCAT(const AReceiptNo: string; const APaymentAmt: Integer; var AStoredData: Boolean; var AResMsg: string): Boolean;
 {$ENDIF}
@@ -392,6 +395,7 @@ begin
       SQL.Add(', denomination_limit_count INTEGER DEFAULT 0'); //
       SQL.Add(', schedule_remain_count INTEGER DEFAULT 0'); //
       SQL.Add(', denomination_description VARCHAR(300)'); //
+      SQL.Add(', denomination_description_eng VARCHAR(300)'); //
       SQL.Add(', limit_card_kcp_payment_yn LOGICAL DEFAULT False'); //
       SQL.Add(', limit_card_bin_code_list MEMO'); //
       SQL.Add(Format(', PRIMARY KEY %s_PK (seq)', [LTableName]));
@@ -421,7 +425,10 @@ begin
       SQL.Add(', ticketable_ticket_no_list VARCHAR(200)'); //
       SQL.Add(', product_image BLOB');
       SQL.Add(', is_denomination_description_exposure LOGICAL DEFAULT False'); //
-      SQL.Add(', denomination_description_list MEMO'); //
+      //SQL.Add(', denomination_description_list MEMO'); //
+      SQL.Add(', product_denomination_id INTEGER DEFAULT 0');
+      SQL.Add(', denomination_description VARCHAR(300)');
+      SQL.Add(', denomination_description_eng VARCHAR(300)');
       SQL.Add(Format(', PRIMARY KEY %s_PK (seq)', [LTableName]));
       SQL.Add(');');
       ExecSQL;
@@ -457,6 +464,7 @@ begin
       SQL.Add(Format('DROP TABLE %s;', [LTableName]));
       SQL.Add(Format('CREATE TABLE %s (seq AUTOINC', [LTableName]));
       SQL.Add(', reserve_no LARGEINT DEFAULT 0'); // 예매번호
+      //SQL.Add(', print_count INTEGER DEFAULT 0'); // 출력횟수
       SQL.Add(', ticketlink_reserve_no VARCHAR(30)'); // 티켓링크 예매번호
       SQL.Add(', ticket_no VARCHAR(20)'); // 티켓번호
       SQL.Add(', barcode_info VARCHAR(20)'); // 바코드
@@ -479,6 +487,8 @@ begin
       SQL.Add(', text_content VARCHAR(100)'); // 출력할 값
       SQL.Add(', text_align SHORTINT DEFAULT 0'); // 정렬 방식 TLabelAlign(0: left, 1: right) - right 정렬은 사용 안함
       SQL.Add(', ticket_size_type SMALLINT DEFAULT 150'); // 티켓 사이즈 (ticketSize_150, ticketSize_187, ticketSize_270)
+      SQL.Add(', editable_component_type_barcode LOGICAL DEFAULT False'); // 굵은 글씨체 여부
+      SQL.Add(', editable_component_type_qrcode LOGICAL DEFAULT False'); // 굵은 글씨체 여부
       SQL.Add(Format(', PRIMARY KEY %s_PK (seq)', [LTableName]));
       SQL.Add(');');
       ExecSQL;
@@ -697,6 +707,7 @@ begin
         Global.StoreInfo.CloseTime := '23:59:59';
 
       Global.StoreInfo.PartnerType := CkJsonObject__stringOf(JO, 'data.partnerType');
+      Global.StoreInfo.TicketSizeCode := CkJsonObject__stringOf(JO, 'data.ticketSizeCode');
       Global.StoreInfo.KioskIssueTypeCode := CkJsonObject__stringOf(JO, 'data.kioskIssueTypeCode'); //ITC_GENERAL or ITC_INTERGRATION
       Global.StoreInfo.ReceiptPrintTypeCode := CkJsonObject__stringOf(JO, 'data.receiptPrintTypeCode');
 
@@ -727,11 +738,22 @@ begin
             Global.StoreInfo.AllowCreditCard := True
           else if (LValue = PMC_PAYCO) then
             Global.StoreInfo.AllowPAYCO := True;
+          {
+          //chy test
+          else if (LValue = PMC_ALIPAY) then
+            Global.StoreInfo.AllowAliPay := True
+          else if (LValue = PMC_WECHAT) then
+            Global.StoreInfo.AllowWechatPay := True;
+          }
+          Global.StoreInfo.AllowAliPay := True;
+          Global.StoreInfo.AllowWechatPay := True;
         end
       else
       begin
         Global.StoreInfo.AllowCreditCard := True;
         Global.StoreInfo.AllowPAYCO := True;
+        Global.StoreInfo.AllowAliPay := False;
+        Global.StoreInfo.AllowWechatPay := False;
       end;
 
       //바코드 조회 사용 여부
@@ -932,7 +954,15 @@ begin
       JA := CkJsonObject_ArrayOf(JO, 'data');
       LCount := CkJsonArray_getSize(JA);
       if (LCount = 0) then
-        raise Exception.Create('조회할 회차 정보가 없습니다.');
+      begin
+        AResMsg := GetTextLocale(['매표소를 이용해주시기 바랍니다.',
+                                  'Please visit the ticket office. ',
+                                  'チケット売り場をご利用ください。',
+                                  '请前往购票处。']);
+
+        //raise Exception.Create('조회할 회차 정보가 없습니다.');
+        raise Exception.Create(AResMsg);
+      end;
 
       for var I := 0 to Pred(LCount) do
       begin
@@ -1043,10 +1073,12 @@ begin
           FieldValues['site_denomination_category_id'] := CkJsonObject_IntOf(RO, 'siteDenominationCategoryId');
           FieldValues['site_denomination_category_name'] := StrPas(CkJsonObject__stringOf(RO, 'siteDenominationCategoryName'));
           FieldValues['site_denomination_code_order'] := CkJsonObject_IntOf(RO, 'siteDenominationCodeOrder');
+          FieldValues['limit_card_kcp_payment_yn'] := CkJsonObject_BoolOf(RO, 'limitCardKcpPaymentYn');
           FieldValues['denomination_limit_count'] := CkJsonObject_IntOf(RO, 'denominationLimitCount');
           FieldValues['schedule_remain_count'] := CkJsonObject_IntOf(RO, 'scheduleRemainCount');
           FieldValues['denomination_description'] := StrPas(CkJsonObject__stringOf(RO, 'denominationDescription'));
-          FieldValues['limit_card_kcp_payment_yn'] := CkJsonObject_BoolOf(RO, 'limitCardKcpPaymentYn');
+          FieldValues['denomination_description_eng'] := StrPas(CkJsonObject__stringOf(RO, 'denominationDescriptionEng'));
+
           RA := CkJsonObject_ArrayOf(RO, PWideChar('limitCardBinCodeList'));
           LCount2 := CkJsonArray_getSize(RA);
           if (LCount2 > 0) then
@@ -1090,7 +1122,7 @@ const
   CS_API_1 = 'reserve/listByBarcode';
   CS_API_2 = 'reserve/list';
 var
-  JO, RO: HCkJsonObject;
+  JO, RO, DRO: HCkJsonObject;
   JA, DA: HCkJsonArray;
   SL: TStringList;
   MS: TMemoryStream;
@@ -1104,6 +1136,7 @@ begin
   AResMsg := '';
   JO := nil;
   RO := nil;
+  DRO := nil;
   JA := nil;
   DA := nil;
   SL := nil;
@@ -1187,11 +1220,18 @@ begin
           FieldValues['is_denomination_description_exposure'] := LIsExposure;
           if LIsExposure then
           begin
+            {
             SL := TStringList.Create;
             DA := CkJsonObject_ArrayOf(RO, 'denominationDescriptionList');
             for var J: ShortInt := 0 to Pred(CkJsonArray_getSize(DA)) do
               SL.Add(StringReplace(CkJsonArray__stringAt(DA, J), _LF, '\n', [rfReplaceAll]));
             FieldValues['denomination_description_list'] := SL.Text;
+            }
+            DA := CkJsonObject_ArrayOf(RO, 'denominationDescriptionList');
+            DRO := CkJsonArray_ObjectAt(DA, 0);
+            FieldValues['product_denomination_id'] := CkJsonObject_IntOf(DRO, 'productDenominationId');
+            FieldValues['denomination_description'] := StrPas(CkJsonObject__stringOf(DRO, 'denominationDescription'));
+            FieldValues['denomination_description_eng'] := StrPas(CkJsonObject__stringOf(DRO, 'denominationDescriptionEng'));
           end;
           if GetStreamFromUrl(StrPas(CkJsonObject__stringOf(RO, 'productImageUrl')), MS) then
             try
@@ -1223,6 +1263,8 @@ begin
       CkJsonArray_Dispose(JA);
     if Assigned(RO) then
       CkJsonObject_Dispose(RO);
+    if Assigned(DRO) then
+      CkJsonObject_Dispose(DRO);
     if Assigned(JO) then
       CkJsonObject_Dispose(JO);
   end;
@@ -1234,19 +1276,21 @@ const
   CS_API_1 = 'issue/getPrintTicketInfo';
   CS_API_2 = 'issue/template/list';
 var
-  JO, JOData, JOItem: HCkJsonObject;
-  JAList: HCkJsonArray;
+  JO, JOData, JOItem, JAItem: HCkJsonObject;
+  JOList, JAList: HCkJsonArray;
   LUrl, LReqJSON, LRespJSON, LExternalReserveNo, LReserveDateTime, LPaymentMethod, LTicketLinkReserveNo, LTicketNo, LBarcodeNo: string;
   LReserveNo: Int64;
-  I, LResCode, LTempCount, LPrintCount: Integer;
+  I, J, LResCode, LTicketCount, LTempCount, LPrintCount: Integer;
 begin
   Result := False;
   ADataCount := 0;
   AResMsg := '';
   JO := CkJsonObject_Create;
   JOData := nil;
-  JAList := nil;
+  JOList := nil;
   JOItem := nil;
+  JAList := nil;
+  JAItem := nil;
   try
     try
       if (not TruncateABSTable(MTTicketList, True)) or
@@ -1282,8 +1326,8 @@ begin
       AResMsg := CkJsonObject__stringOf(JO, 'result.message');
       for I := 0 to Pred(ADataCount) do
       begin
-        JOItem := CkJsonArray_ObjectAt(JAList, I);
-        LPaymentMethod := CkJsonObject__stringOf(JOItem, 'paymentMethod');
+        JAItem := CkJsonArray_ObjectAt(JAList, I);
+        LPaymentMethod := CkJsonObject__stringOf(JAItem, 'paymentMethod');
         if (LPaymentMethod = 'null') then
           LPaymentMethod := '';
 
@@ -1293,26 +1337,28 @@ begin
           FieldValues['reserve_no'] := LReserveNo;
           FieldValues['external_reserve_no'] := LExternalReserveNo;
           FieldValues['reserve_datetime'] := LReserveDateTime;
-          FieldValues['product_name'] := StrPas(CkJsonObject__stringOf(JOItem, 'productName'));
-          FieldValues['product_sub_name'] := StrPas(CkJsonObject__stringOf(JOItem, 'productSubName'));
-          FieldValues['product_schedule'] := StrPas(CkJsonObject__stringOf(JOItem, 'productSchedule'));
-          FieldValues['place_hall_name'] := StrPas(CkJsonObject__stringOf(JOItem, 'placeHallName'));
-          FieldValues['site_denomination_category'] := StrPas(CkJsonObject__stringOf(JOItem, 'siteDenominationCategory'));
-          FieldValues['product_denomination_name'] := StrPas(CkJsonObject__stringOf(JOItem, 'productDenominationName'));
-          FieldValues['product_denomination_name_eng'] := StrPas(CkJsonObject__stringOf(JOItem, 'productDenominationNameEng'));
-          FieldValues['mark_price'] := StrPas(CkJsonObject__stringOf(JOItem, 'markPrice'));
-          FieldValues['reserve_member_name'] := StrPas(CkJsonObject__stringOf(JOItem, 'reserveMemberName'));
-          FieldValues['reserve_member_contact'] := StrPas(CkJsonObject__stringOf(JOItem, 'reserveMemberContact'));
-          FieldValues['reserve_contact'] := StringReplace(StrPas(CkJsonObject__stringOf(JOItem, 'reserveContact')), '/', '-', [rfReplaceAll]);
-          FieldValues['reserve_channel'] := StrPas(CkJsonObject__stringOf(JOItem, 'reserveChannel'));
+          FieldValues['product_name'] := StrPas(CkJsonObject__stringOf(JAItem, 'productName'));
+          FieldValues['product_sub_name'] := StrPas(CkJsonObject__stringOf(JAItem, 'productSubName'));
+          FieldValues['product_schedule'] := StrPas(CkJsonObject__stringOf(JAItem, 'productSchedule'));
+          FieldValues['place_hall_name'] := StrPas(CkJsonObject__stringOf(JAItem, 'placeHallName'));
+          FieldValues['site_denomination_category'] := StrPas(CkJsonObject__stringOf(JAItem, 'siteDenominationCategory'));
+          FieldValues['product_denomination_name'] := StrPas(CkJsonObject__stringOf(JAItem, 'productDenominationName'));
+          FieldValues['product_denomination_name_eng'] := StrPas(CkJsonObject__stringOf(JAItem, 'productDenominationNameEng'));
+          FieldValues['mark_price'] := StrPas(CkJsonObject__stringOf(JAItem, 'markPrice'));
+          FieldValues['reserve_member_name'] := StrPas(CkJsonObject__stringOf(JAItem, 'reserveMemberName'));
+          FieldValues['reserve_member_contact'] := StrPas(CkJsonObject__stringOf(JAItem, 'reserveMemberContact'));
+          FieldValues['reserve_contact'] := StringReplace(StrPas(CkJsonObject__stringOf(JAItem, 'reserveContact')), '/', '-', [rfReplaceAll]);
+          FieldValues['reserve_channel'] := StrPas(CkJsonObject__stringOf(JAItem, 'reserveChannel'));
           FieldValues['payment_method'] := LPaymentMethod;
-          FieldValues['publish_no'] := StrPas(CkJsonObject__stringOf(JOItem, 'publishNo'));
-          FieldValues['barcode'] := StrPas(CkJsonObject__stringOf(JOItem, 'barcode'));
+          FieldValues['publish_no'] := StrPas(CkJsonObject__stringOf(JAItem, 'publishNo'));
+          FieldValues['barcode'] := StrPas(CkJsonObject__stringOf(JAItem, 'barcode'));
           Post;
         end;
       end;
 
-      if Global.TicketPrinter.Enabled then
+      Global.TicketTemplateCount := 0;
+      if (Global.TicketPrinter.Enabled) and
+         ((Global.StoreInfo.TicketSizeCode = 'ticketSize_150') or (Global.StoreInfo.TicketSizeCode = 'ticketSize_187')) then
       begin
         //티켓 템플릿 정보 수신
         LUrl := Format('%s/v2/api/%s', [Global.APIServerInfo.Host, CS_API_2]);
@@ -1328,6 +1374,7 @@ begin
         if not CkJsonObject_Load(JO, PWideChar(LRespJSON)) then
           raise Exception.Create(CkJsonObject__lastErrorText(JO));
 
+        //Global.TicketTemplateCount := 0;
         LResCode := CkJsonObject_IntOf(JO, 'result.code');
         if (LResCode <> 0) then
         begin
@@ -1335,80 +1382,91 @@ begin
           raise Exception.Create(AResMsg);
         end;
 
-        JOData := CkJsonObject_ObjectOf(JO, 'data');
-        LReserveNo := StrToInt64Def(CkJsonObject__stringOf(JOData, 'reserveNo'), 0);
-        LPrintCount := CkJsonObject_IntOf(JOData, 'printCount');
-        LTicketLinkReserveNo := CkJsonObject__stringOf(JOData, 'ticketlinkReserveNo');
-        LTicketNo := CkJsonObject__stringOf(JOData, 'ticketNo');
-        LBarcodeNo := CkJsonObject__stringOf(JOData, 'barcodeInfo');
-        JAList := CkJsonObject_ArrayOf(JOData, 'ticketTemplateObjectList');
-        LTempCount := CkJsonArray_getSize(JAList);
-        for I := 0 to Pred(LTempCount) do
+        JOList := CkJsonObject_ArrayOf(JO, 'data');
+        LTicketCount := CkJsonArray_getSize(JOList);
+        for I := 0 to Pred(LTicketCount) do
         begin
-          JOItem := CkJsonArray_ObjectAt(JAList, I);
-          with MTTicketTemplate do
+          JOItem := CkJsonArray_ObjectAt(JOList, I);
+
+          LReserveNo := StrToInt64Def(CkJsonObject__stringOf(JOItem, 'reserveNo'), 0);
+          LPrintCount := CkJsonObject_IntOf(JOItem, 'printCount');
+          LTicketLinkReserveNo := CkJsonObject__stringOf(JOItem, 'ticketlinkReserveNo');
+          LTicketNo := CkJsonObject__stringOf(JOItem, 'ticketNo');
+          LBarcodeNo := CkJsonObject__stringOf(JOItem, 'barcodeInfo');
+          JAList := CkJsonObject_ArrayOf(JOItem, 'ticketTemplateObjectList');
+          LTempCount := CkJsonArray_getSize(JAList);
+          for J := 0 to Pred(LTempCount) do
           begin
-            (*
-            *************** request ***************
-            {
-              "reserveNo": 1410077644,
-              "partnerNo" : 20059
-            }
-            *************** response ***************
-            {
-              "objectId": 502309, //Object ID
-              "templateId": 19253, //티켓 템플릿 ID
-              "ticketDirection": "horizontal", //출력 구분(horizontal, vertical)
-              "pxx": 137, //위치정보(x값, 픽셀)
-              "pxy": 29, //위치정보(y값, 픽셀)
-              "mmx": 48.33, //위치정보(x값, mm)
-              "mmy": 10.23, //위치정보(y값, mm)
-              "pxwidth": 40, //크기정보(width값, 픽셀)
-              "pxheight": 15, //크기정보(height값, 픽셀)
-              "mmwidth": 14.11, //크기정보(width값, mm)
-              "mmheight": 5.29, //크기정보(height값, mm)
-              "bold": "true", //폰트 bold(true, false)
-              "fontSize": 6, //폰트 사이즈
-              "rotateCode": 0,
-              "degreeRotation": 0,
-              "textDataFieldType": "productName", //표시 항목
-              "encodedBackgroundImage": "",
-              "editableComponentType": "text", //표시될 값의 데이터형식
-              "textContent": "개발_스포츠_지정", //표시될 값
-              "textAlign": "left", //값 정렬 방식
-              "ticketSizeType": "ticketSize_150", //티켓 사이즈
-              "ticketNo": false,
-              "editableComponentTypeBarcode": false,
-              "editableComponentTypeQrcode": false
-            },
-            *)
-            Append;
-            FieldValues['reserve_no'] := LReserveNo;
-            FieldValues['object_id'] := CkJsonObject_IntOf(JOItem, 'objectId');
-            FieldValues['template_id'] := CkJsonObject_IntOf(JOItem, 'templateId');
-            FieldValues['ticket_direction'] := GetTicketLabelDirection(StrPas(CkJsonObject__stringOf(JOItem, 'ticketDirection')));
-            FieldValues['pxx'] := CkJsonObject_IntOf(JOItem, 'pxx');
-            FieldValues['pxy'] := CkJsonObject_IntOf(JOItem, 'pxy');
-            FieldValues['mmx'] := StrToFloatDef(StrPas(CkJsonObject__stringOf(JOItem, 'mmx')), 0);
-            FieldValues['mmy'] := StrToFloatDef(StrPas(CkJsonObject__stringOf(JOItem, 'mmy')), 0);
-            FieldValues['pxwidth'] := CkJsonObject_IntOf(JOItem, 'pxwidth');
-            FieldValues['pxheight'] := CkJsonObject_IntOf(JOItem, 'pxheight');
-            FieldValues['mmwidth'] := StrToFloatDef(StrPas(CkJsonObject__stringOf(JOItem, 'mmwidth')), 0);
-            FieldValues['mmheight'] := StrToFloatDef(StrPas(CkJsonObject__stringOf(JOItem, 'mmheight')), 0);
-            FieldValues['bold'] := CkJsonObject_BoolOf(JOItem, 'bold');
-            FieldValues['font_size'] := CkJsonObject_IntOf(JOItem, 'fontSize');
-            FieldValues['rotate_code'] := CkJsonObject_IntOf(JOItem, 'rotateCode');
-            FieldValues['degree_rotation'] := CkJsonObject_IntOf(JOItem, 'degreeRotation');
-            FieldValues['editable_component_type'] := GetTicketLabelType(CkJsonObject__stringOf(JOItem, 'editableComponentType'));
-            FieldValues['text_content'] := StrPas(CkJsonObject__stringOf(JOItem, 'textContent'));
-            FieldValues['text_align'] := GetTicketLabelAlign(CkJsonObject__stringOf(JOItem, 'textAlign'));
-            FieldValues['ticket_size_type'] := StrToIntDef(StringReplace(StrPas(CkJsonObject__stringOf(JOItem, 'ticketSizeType')), 'ticketSize_', '', []), 150);
-            Post;
+            JAItem := CkJsonArray_ObjectAt(JAList, J);
+            with MTTicketTemplate do
+            begin
+              (*
+              *************** request ***************
+              {
+                "reserveNo": 1410077644,
+                "partnerNo" : 20059
+              }
+              *************** response ***************
+              {
+                "objectId": 502309, //Object ID
+                "templateId": 19253, //티켓 템플릿 ID
+                "ticketDirection": "horizontal", //출력 구분(horizontal, vertical)
+                "pxx": 137, //위치정보(x값, 픽셀)
+                "pxy": 29, //위치정보(y값, 픽셀)
+                "mmx": 48.33, //위치정보(x값, mm)
+                "mmy": 10.23, //위치정보(y값, mm)
+                "pxwidth": 40, //크기정보(width값, 픽셀)
+                "pxheight": 15, //크기정보(height값, 픽셀)
+                "mmwidth": 14.11, //크기정보(width값, mm)
+                "mmheight": 5.29, //크기정보(height값, mm)
+                "bold": "true", //폰트 bold(true, false)
+                "fontSize": 6, //폰트 사이즈
+                "rotateCode": 0,
+                "degreeRotation": 0,
+                "textDataFieldType": "productName", //표시 항목
+                "encodedBackgroundImage": "",
+                "editableComponentType": "text", //표시될 값의 데이터형식
+                "textContent": "개발_스포츠_지정", //표시될 값
+                "textAlign": "left", //값 정렬 방식
+                "ticketSizeType": "ticketSize_150", //티켓 사이즈
+                "ticketNo": false,
+                "editableComponentTypeBarcode": false,
+                "editableComponentTypeQrcode": false
+              },
+              *)
+              Append;
+              FieldValues['reserve_no'] := LReserveNo;
+              //FieldValues['print_count'] := LPrintCount;
+              FieldValues['ticket_no'] := LTicketNo;
+              FieldValues['object_id'] := CkJsonObject_IntOf(JAItem, 'objectId');
+              FieldValues['template_id'] := CkJsonObject_IntOf(JAItem, 'templateId');
+              FieldValues['ticket_direction'] := GetTicketLabelDirection(StrPas(CkJsonObject__stringOf(JAItem, 'ticketDirection')));
+              FieldValues['pxx'] := CkJsonObject_IntOf(JAItem, 'pxx');
+              FieldValues['pxy'] := CkJsonObject_IntOf(JAItem, 'pxy');
+              FieldValues['mmx'] := StrToFloatDef(StrPas(CkJsonObject__stringOf(JAItem, 'mmx')), 0);
+              FieldValues['mmy'] := StrToFloatDef(StrPas(CkJsonObject__stringOf(JAItem, 'mmy')), 0);
+              FieldValues['pxwidth'] := CkJsonObject_IntOf(JAItem, 'pxwidth');
+              FieldValues['pxheight'] := CkJsonObject_IntOf(JAItem, 'pxheight');
+              FieldValues['mmwidth'] := StrToFloatDef(StrPas(CkJsonObject__stringOf(JAItem, 'mmwidth')), 0);
+              FieldValues['mmheight'] := StrToFloatDef(StrPas(CkJsonObject__stringOf(JAItem, 'mmheight')), 0);
+              FieldValues['bold'] := CkJsonObject_BoolOf(JAItem, 'bold');
+              FieldValues['font_size'] := CkJsonObject_IntOf(JAItem, 'fontSize');
+              FieldValues['rotate_code'] := CkJsonObject_IntOf(JAItem, 'rotateCode');
+              FieldValues['degree_rotation'] := CkJsonObject_IntOf(JAItem, 'degreeRotation');
+              FieldValues['editable_component_type'] := GetTicketLabelType(CkJsonObject__stringOf(JAItem, 'editableComponentType'));
+              FieldValues['text_content'] := StrPas(CkJsonObject__stringOf(JAItem, 'textContent'));
+              FieldValues['text_align'] := GetTicketLabelAlign(CkJsonObject__stringOf(JAItem, 'textAlign'));
+              FieldValues['ticket_size_type'] := StrToIntDef(StringReplace(StrPas(CkJsonObject__stringOf(JAItem, 'ticketSizeType')), 'ticketSize_', '', []), 150);
+              FieldValues['editable_component_type_barcode'] := CkJsonObject_BoolOf(JAItem, 'editableComponentTypeBarcode');
+              FieldValues['editable_component_type_qrcode'] := CkJsonObject_BoolOf(JAItem, 'editableComponentTypeQrcode');
+              Post;
+            end;
           end;
         end;
+        AResMsg := CkJsonObject__stringOf(JO, 'result.message');
+        Global.TicketTemplateCount := LTicketCount * LTempCount;
       end;
 
-      AResMsg := CkJsonObject__stringOf(JO, 'result.message');
       Result := True;
     except
       on E: Exception do
@@ -1627,6 +1685,7 @@ begin
           CkJsonObject_UpdateInt(JOReq, PWideChar(Format('paymentList[%d].payMethod', [nIndex])), FieldByName('pay_method').AsInteger);
           CkJsonObject_UpdateBool(JOReq, PWideChar(Format('paymentList[%d].approvalYn', [nIndex])), FieldByName('approval_yn').AsBoolean);
           CkJsonObject_UpdateString(JOReq, PWideChar(Format('paymentList[%d].vanCd', [nIndex])), PWideChar(FieldByName('van_cd').AsString));
+          CkJsonObject_UpdateString(JOReq, PWideChar(Format('paymentList[%d].siteCd', [nIndex])), PWideChar(Global.StoreInfo.SiteCode));//siteCd	String	결제사이트코드	필수	ex ) AHXTD
           CkJsonObject_UpdateString(JOReq, PWideChar(Format('paymentList[%d].tid', [nIndex])), PWideChar(FieldByName('tid').AsString));
           CkJsonObject_UpdateBool(JOReq, PWideChar(Format('paymentList[%d].manualYn', [nIndex])), FieldByName('manual_yn').AsBoolean);
           CkJsonObject_UpdateString(JOReq, PWideChar(Format('paymentList[%d].creditCardNo', [nIndex])), PWideChar(FieldByName('credit_card_no').AsString));
@@ -1760,7 +1819,8 @@ begin
       Global.VanModule.VanCode := AVanCode;
       Global.VanModule.ApplyConfigAll;
 {$IFDEF RELEASE}
-      if not Global.VanModule.CallICReaderVerify(AVanTID, LRecvMsg) then
+      //if not Global.VanModule.CallICReaderVerify(AVanTID, LRecvMsg) then
+      if not Global.VanModule.CallICReaderVerify then
         raise Exception.Create(LRecvMsg);
 {$ENDIF}
       Global.ICCardReader.Active := True;
@@ -1845,9 +1905,11 @@ function TTLDataModule.GetICCardInsertionStatus(var ARespCode, ARespMsg: AnsiStr
 begin
   ARespCode := '';
   ARespMsg := '';
-  Result := Global.VanModule.CallICCardInsertionCheck(Global.StoreInfo.VANTID, False, ARespCode, ARespMsg);
+  //Result := Global.VanModule.CallICCardInsertionCheck(Global.StoreInfo.VANTID, False, ARespCode, ARespMsg);
+  Result := Global.VanModule.CallICCardInsertionCheck(False);
   if not Result then
-    AddLog(Format('DM.GetICCardInsertionStatus.Exception = Code: %s, Error: %s', [ARespCode, ARespMsg]));
+    //AddLog(Format('DM.GetICCardInsertionStatus.Exception = Code: %s, Error: %s', [ARespCode, ARespMsg]));
+    AddLog('DM.GetICCardInsertionStatus.Exception = False');
 end;
 
 //신용카드 결제
@@ -1880,15 +1942,22 @@ begin
       SI.KeyInput     := False;
       SI.TrsType      := ''; //A:바코드 사전등록 시
       SI.HalbuMonth   := 0;
+
+      //chy test - 결제
       SI.TerminalID   := Global.StoreInfo.VANTID;
+      //SI.TerminalID   := '';
+
       SI.BizNo        := Global.StoreInfo.BizNo;
       SI.SignOption   := CRC_NO;
-      SI.CardBinNo    := '';
+      //SI.CardBinNo    := '';
       SI.OrgAgreeNo   := '';
       SI.OrgAgreeDate := '';
+      SI.FormHideYN   := True;
+
+      //chy test - 결제
       //결제 서비스 방식이 PG인 경우
       if Global.StoreInfo.UsePG then
-        SI.Reserved1 := CCC_FLAG_USE_PG;
+        SI.PG_YN := True;
 
       //카드사별 제약 처리
       LCardBinNo := '';
@@ -1898,25 +1967,20 @@ begin
            (Global.DenominList[I].LimitCardBinCodeList.Count = 0) then
           Continue;
 
+        //chy van - 차후 8자리 비교여부 체크
         if LCardBinNo.IsEmpty then
-        begin
-          RI := Global.VanModule.CallCardInfo(SI);
-          if not RI.Result then
-            raise Exception.Create(RI.Msg);
-
-          LCardBinNo := Trim(RI.CardBinNo); //6자리(국내), 8자리(국제)
-          SI.CardBinNo := LCardBinNo;
-        end;
-
+          LCardBinNo := Global.VanModule.CallCardInfo;
         if (Global.DenominList[I].LimitCardBinCodeList.IndexOf(LCardBinNo) < 0) then
+        begin
           if (Global.DenominList[I].LimitCardBinCodeList.IndexOf(LCardBinNo.SubString(0, 6)) < 0) then
             raise Exception.Create(GetTextLocale(['주문할 상품에 사용할 수 없는 카드입니다.',
                                                   'This card can''t be used to complete your order.',
                                                   '注文する商品に使用できないカードです。',
                                                   '所购买商品无法利用银行卡支付。']));
+        end;
       end;
 
-      //chy test
+      //chy test - 결제
       {$IFDEF RELEASE}
       RI := Global.VanModule.CallCard(SI);
       if not RI.Result then
@@ -2170,6 +2234,144 @@ begin
       CkJsonObject_Dispose(JOExtras);
     CkJsonObject_Dispose(JOResp);
     CkJsonObject_Dispose(JOReq);
+  end;
+end;
+
+//모바일 결제
+function TTLDataModule.DoApproveMobile(const AReceiptNo: string; const APaymentAmt: Integer; const APaymentType: string; const ABarcode: string; var AStoredData: Boolean; var AResMsg: string): Boolean;
+var
+  SI: TCardSendInfoDM;
+  RI: TCardRecvInfoDM;
+  LReserveNo: Int64;
+  LDataCount: Integer;
+  LCardBinNo, LErrMsg: string;
+begin
+  Result := False;
+  AStoredData := True;
+  AResMsg := '';
+
+  try
+    if Global.StoreInfo.UseDetectCardInsert then
+      ShowWaitMsg(GetTextLocale(['결제내역을 처리 중입니다...' + _CRLF + '잠시만 기다려 주십시오.',
+                                 'Processing your payment...' + _CRLF + 'Please hold.',
+                                 '決済履歴を処理しています...' + _CRLF + 'しばらくお待ちください。',
+                                 '支付明细正在处理中...' + _CRLF + '请稍后。']));
+
+    {
+    // 알리페이
+    [ 요청 데이터 샘플 ]
+
+    "PROC_CODE": "A16",
+    "WORK_CODE": "0100",
+    "TX_TYPE": "80",
+    "OTC_NO": "284346672059938953",
+    "POS_CD": "PSOB",
+    "INS_MON": "00",
+    "TOT_AMT": "1000",
+    "ORG_AMT": "909",
+    "TAX_AMT": "91",
+    "SVC_AMT": "0",
+    "DUTY_AMT": "0",
+    "USER_DATA" : "3"
+
+    //위쳇페이
+    [ 요청 데이터 샘플 ]
+
+    "POS_CD": "PSOB",
+    "PROC_CODE": "A20",
+    "WORK_CODE": "0100",
+    "TERM_ID": "1002887640",
+    "PG_YN": "N",
+    "KIOSK_YN": "N",
+    "TX_TYPE": "80",
+    "OTC_NO": "132196781601527016",
+    "INS_MON": "00",
+    "TOT_AMT": "000000010",
+    "ORG_AMT": "000000010",
+    "DUTY_AMT": "000000000",
+    "SVC_AMT": "000000000",
+    "TAX_AMT": "000000000",
+
+     }
+
+    try
+      SI.Approval     := True;
+      SI.SaleAmt      := APaymentAmt;
+      SI.FreeAmt      := 0;
+      SI.SvcAmt       := 0;
+      SI.VatAmt       := 0; //비과세
+      SI.EyCard       := False;
+      SI.KeyInput     := False;
+      SI.TrsType      := ''; //A:바코드 사전등록 시
+      SI.HalbuMonth   := 0;
+
+      {$IFDEF RELEASE}
+      SI.TerminalID   := Global.StoreInfo.VANTID;
+      SI.BizNo        := Global.StoreInfo.BizNo;
+      {$ENDIF}
+      {$IFDEF DEBUG}
+      SI.TerminalID   := '1002887640';
+      SI.BizNo        := '1138521083';
+      {$ENDIF}
+
+      SI.SignOption   := CRC_NO;
+      //SI.CardBinNo    := '';
+      SI.OrgAgreeNo   := '';
+      SI.OrgAgreeDate := '';
+      SI.FormHideYN   := True;
+      SI.QRData       := AnsiString(ABarcode);
+      SI.PG_YN        := False;
+
+      if APaymentType = PMC_ALIPAY then
+        SI.MobilePayCode := AnsiString('001')
+      else if APaymentType = PMC_WECHAT then
+        SI.MobilePayCode := AnsiString('002');
+
+      RI := Global.VanModule.CallAppPay(SI);
+      if not RI.Result then
+        raise Exception.Create(RI.Msg);
+
+      Result := True;
+      if Result then
+      begin
+        PaymentLog(True, AReceiptNo, CPM_CARD, RI.CardNo, RI.AgreeNo, APaymentAmt);
+        //매출 저장 시에 에러가 발생하더라도 저장 실패 메시지만 표시하도록 예외 처리
+        try
+          if not UpdatePaymentCARD(True, AReceiptNo, CPM_CARD, RI, LErrMsg) then
+            raise Exception.Create(LErrMsg);
+          if not UpdateReceipt(AReceiptNo, APaymentAmt, 0, 0, Copy(RI.AgreeDateTime, 1, 8), Copy(RI.AgreeDateTime, 9, 6), LErrMsg) then
+            raise Exception.Create(LErrMsg);
+          if not PostReservation(AReceiptNo, TPT_OFF_CARD, LReserveNo, LErrMsg) then
+            raise Exception.Create(LErrMsg);
+
+          //발권내역 저장
+          Global.ReceiptInfo.ReserveNo := LReserveNo;
+          if not GetTicketList(LReserveNo, LDataCount, LErrMsg) then
+            raise Exception.Create(LErrMsg);
+          if (LDataCount = 0) then
+            raise Exception.Create(Format(GetTextLocale(['예매번호 %d로 등록된 예매 내역이 없습니다.',
+                                                         'No tickets found with reservation number %d.',
+                                                         '予約番号「%d」で登録されている前売履歴がありません。',
+                                                         '无与预购号码%d相匹配的预购明细。']), [LReserveNo]));
+        except
+          on E: Exception do
+          begin
+            AStoredData := False;
+            AResMsg := E.Message;
+            AddLog(Format('DM.DoApproveMobile.StoredData.Exception = %s', [AResMsg]));
+          end;
+        end;
+      end;
+    except
+      on E: Exception do
+      begin
+        AResMsg := E.Message;
+        AddLog(Format('DM.DoApproveMobile.Exception = %s', [AResMsg]));
+      end;
+    end;
+  finally
+    if Global.StoreInfo.UseDetectCardInsert then
+      PushWaitMsg;
   end;
 end;
 
@@ -2497,7 +2699,7 @@ begin
   JOReceiptEtc := CkJsonObject_Create;
   JOItem := nil;
   SS := TStringStream.Create;
-  SetLength(Global.TicketTemplateList, 0);
+  //SetLength(Global.TicketTemplateList, 0);
 
   try
     LSaleDate := Global.FormattedCurrentDate;
@@ -2595,7 +2797,8 @@ begin
       end;
 
       //티켓 발행 내역 (영수증 프린터로 티켓 출력 시에만 사용)
-      if (not Global.TicketPrinter.Active) and
+      //if (not Global.TicketPrinter.Active) and
+      if (Global.StoreInfo.TicketSizeCode = 'ticketSize_receipt') and
          Global.ReceiptPrinter.Enabled and
          Global.ReceiptPrinter.Active then
       begin

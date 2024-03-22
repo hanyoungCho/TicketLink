@@ -348,24 +348,39 @@ implementation
 
 function DoPrintTicketLabel(ADataSet: TDataSet; var AResMsg: string): Boolean;
 var
-  LSpeed, LDensity, LOrientation, LCuttingPeriod, LResolution, LDotsPer1mm: Integer;
-  LPaperWidth, LPaperHeight, LMarginX, LMarginY, LPosX, LPosY, LFontSize, LRotation: Integer;
-  LTextValue: string;
-  LAutoCut, LBackFeeding, LIsBold: Boolean;
+  LDensity, LOrientation, LResolution, LDotsPer1mm: Integer;
+  LPaperWidth, LPaperHeight, LWidth, LHeight, LPosX, LPosY, LFontSize, LRotation: Integer;
+  LTextValue, LTicketNo: string;
+  LAutoCut, LIsBold: Boolean;
+  nStatus, nPrinterY, nStartY: Integer;
+  nTicketSizeType: Integer;
+  nFlipX, nFlipY, nTempX, nTempY: Integer;
+  LBarcodeSize, LQrcodeSize: Integer;
+  LEditableComponentType: String;
+  LEditableComponentTypeBarcode, LEditableComponentTypeQrcode: Boolean;
+  sAnsiStr: AnsiString;
+  qrSize: Integer;
 begin
   Result := False;
   AResMsg := '';
   try
-    LDensity := 14;
-    LOrientation := Ord(TLabelOrientation.loTopToBottom);
-    LCuttingPeriod := 1;
-    LAutoCut := True;
-    LBackFeeding := True;
-    LResolution := GetPrinterDPI;
-    LDotsPer1mm := Round(LResolution / 25.4);
-    //마진값 설정 확인 필요
-    LMarginX := (0 * LDotsPer1mm);
-    LMarginY := (0 * LDotsPer1mm);
+    //LDensity := 14;
+    LDensity := 14 + 1;
+
+    //LAutoCut := True;
+    //LResolution := GetPrinterDPI;
+    //LDotsPer1mm := Round(LResolution / 25.4);
+    LDotsPer1mm := 8;
+    nPrinterY := 800;
+    nTicketSizeType := 0;
+    LTicketNo := '';
+
+    //nStatus := ConnectPrinterEx(0, 'COM4', 115200, 8, 0, 1); // SERIAL (COM)
+    nStatus := ConnectPrinterEx(2, '', 1024, 1025, 0, 0);  //
+    if nStatus <> SLCS_ERR_CODE_NO_ERROR then
+      raise Exception.Create(IntToStr(nStatus));
+
+    ClearBuffer;
 
     with ADataSet do
     try
@@ -373,31 +388,247 @@ begin
       First;
       while not Eof do
       begin
-        LPaperWidth := Trunc(FieldByName('mmwidth').AsFloat * LDotsPer1mm);
-        LPaperHeight := Trunc(FieldByName('mmheight').AsFloat * LDotsPer1mm);
-        LPosX := Trunc(FieldByName('mmx').AsFloat * LDotsPer1mm);
-        LPosY := Trunc(FieldByName('mmy').AsFloat * LDotsPer1mm);
-        LFontSize := FieldByName('font_size').AsInteger;
+        if LTicketNo = '' then
+          LTicketNo := FieldByName('ticket_no').AsString
+        else if LTicketNo <> FieldByName('ticket_no').AsString then
+        begin
+          SetConfigOfPrinter(5, LDensity, LOrientation, False, 1, True);
+          Prints(1, 1);
+          LTicketNo := FieldByName('ticket_no').AsString;
+        end;
+
+        //LPosX := Trunc(FieldByName('mmx').AsFloat * LDotsPer1mm);
+        //LPosY := Trunc(FieldByName('mmy').AsFloat * LDotsPer1mm);
+        //LFontSize := FieldByName('font_size').AsInteger;
         LRotation := FieldByName('rotate_code').AsInteger;
         LIsBold := FieldByName('bold').AsBoolean;
         LTextValue := FieldByName('text_content').AsString;
+        LEditableComponentType := FieldByName('editable_component_type').AsString;
+        LEditableComponentTypeBarcode := FieldByName('editable_component_type_barcode').AsBoolean;
+        LEditableComponentTypeQrcode := FieldByName('editable_component_type_qrcode').AsBoolean;
 
-        ClearBuffer;
-        SetConfigOfPrinter(SLCS_PRINTER_SETTING_SPEED, LDensity, LOrientation, LAutoCut, LCuttingPeriod, LBackFeeding);
-        SetCharacterset(SLCS_ICS_KOREA, SLCS_FCP_CP437);
-        SetPaper(LMarginX, LMarginY, LPaperWidth, LPaperHeight, SLCS_BLACKMARK, 0, LDotsPer1mm * 2);
-        PrintDirect('STd', True); //STd: Direct thermal, STt: Thermal transfer
+        if nTicketSizeType = 0 then
+        begin
+          nTicketSizeType := FieldByName('ticket_size_type').AsInteger;
 
-        PrintTrueFontW(LPosX, LPosY, PChar('Arial'), LFontSize, LRotation, False, LIsBold, False, PChar(LTextValue), False);
-        Prints(1, 1);
-        DisconnectPrinter;
+          if nTicketSizeType = 150 then
+          begin
+            LWidth := 149 * LDotsPer1mm;
+            LHeight := 60 * LDotsPer1mm;
+
+            LPaperWidth := Trunc(101.6 * LDotsPer1mm);
+            LPaperHeight := Trunc(149 * LDotsPer1mm);
+          end
+          else
+          begin
+            LWidth := 187 * LDotsPer1mm;
+            LHeight := 75 * LDotsPer1mm;
+
+            LPaperWidth := Trunc(101.6 * LDotsPer1mm);
+            LPaperHeight := Trunc(187.5 * LDotsPer1mm);
+          end;
+
+          nStartY := Trunc((nPrinterY - LHeight) / 2);
+        end;
+
+        LPosX := Trunc(LWidth - FieldByName('mmx').AsFloat * LDotsPer1mm);
+        LPosY := Trunc(nStartY + FieldByName('mmy').AsFloat * LDotsPer1mm);
+
+        if LTextValue = 'null' then
+          Next;
+
+        LFontSize := 0;
+        case FieldByName('font_size').AsInteger of
+          1: LFontSize := 8;
+          2: LFontSize := 12;
+          3: LFontSize := 16;
+          4: LFontSize := 18;
+          5: LFontSize := 22;
+          6: LFontSize := 28;
+          7: LFontSize := 36;
+          8: LFontSize := 40;
+          9: LFontSize := 48;
+          else
+            LFontSize := 16;
+        end;
+
+        case LRotation of
+          0: LOrientation := 1; // [0도] 정방향
+          1: LOrientation := 0; // [90도] 세로 우
+          2: LOrientation := 0; // [180도]
+          3: LOrientation := 1; // [270도] 세로 왼
+          else
+            LOrientation := 1;
+        end;
+
+        if LOrientation = 1 then
+        begin
+          LRotation := (LRotation + 1) mod 4;
+        end
+        else
+        begin
+          if 0 < LRotation then
+            LRotation := LRotation - 1
+          else
+            LRotation := 3;
+        end;
+
+        if LOrientation = 1 then
+        begin
+          // 반전
+          nFlipX := Trunc(LPaperHeight - LPosX);
+          nFlipY := Trunc(LPaperWidth - LPosY);
+
+          LPosX := nFlipX;
+          LPosY := nFlipY;
+        end;
+
+        nTempX := LPosX;
+        nTempY := LPosY;
+
+        LPosX := nTempY + 16;
+        LPosY := nTempX + 16;
+
+        // 마지막 보정 - 추가해야 함.
+        (*
+        if LOrientation = 1 then
+        begin
+          if 150 then
+          begin
+            horizontal: 2 * MM_TO_DOT,
+            vertical: 2 * MM_TO_DOT,
+          end;
+          if 180 then
+          begin
+            horizontal: 3 * MM_TO_DOT,
+            vertical: 2 * MM_TO_DOT,
+          end;
+        *)
+
+        if LEditableComponentTypeBarcode = True then
+        begin
+          LBarcodeSize := 0;
+          if LEditableComponentType = 'barcode' then
+            LBarcodeSize := 3
+          else if LEditableComponentType = 'parkingBarcode' then
+            LBarcodeSize := 3
+          else if LEditableComponentType = 'lgartBarcode' then
+            LBarcodeSize := 3
+          else if LEditableComponentType = 'tlPrdLgartBarcode' then
+            LBarcodeSize := 2
+          else if LEditableComponentType = 'smallBarcode' then
+            LBarcodeSize := 2
+          else
+            LBarcodeSize := 2;
+
+          sAnsiStr := LTextValue;
+          Print1DBarcode(
+              LPosX,
+              LPosY,
+              1, // CODE128
+              LBarcodeSize, //좁은 바 너비
+              10, //넗은 바 너비
+              50, // 바코드 높이
+              LRotation,
+              0,
+              PAnsiChar(sAnsiStr)
+          );
+
+        end
+        else if LEditableComponentTypeQrcode = True then
+        begin
+          //x,y좌표를 QR코드 정 가운데로 잡습니다 회전기준.
+          LQRCodeSize := 0;
+          if LEditableComponentType = 'qrCode1' then
+            LQRCodeSize := 1
+          else if LEditableComponentType = 'qrCode2' then
+            LQRCodeSize := 2
+          else if LEditableComponentType = 'qrCode3' then
+            LQRCodeSize := 3
+          else if LEditableComponentType = 'qrCode4' then
+            LQRCodeSize := 4
+          else if LEditableComponentType = 'qrCode5' then
+            LQRCodeSize := 5
+          else if LEditableComponentType = 'qrCode6' then
+            LQRCodeSize := 6
+          else if LEditableComponentType = 'qrCode7' then
+            LQRCodeSize := 7
+          else if LEditableComponentType = 'qrCode8' then
+            LQRCodeSize := 8
+          else if LEditableComponentType = 'parkingQrcode' then
+            LQRCodeSize := 5
+          else if LEditableComponentType = 'questionnaireQrcode' then
+            LQRCodeSize := 3
+          else if LEditableComponentType = 'seoulArtCenterQrcode' then
+            LQRCodeSize := 5
+          else
+            LQRCodeSize := 5;
+
+          nTempX := 0;
+          nTempY := 0;
+          qrSize := Trunc(2.7 * 8 * LQRCodeSize);
+
+          if LRotation = 1 then
+              nTempX := nTempX - qrSize
+          else if LRotation = 2 then
+          begin
+            nTempX := nTempX - qrSize;
+            nTempY := nTempY - qrSize;
+          end
+          else if lrotation = 3 then
+            nTempY := nTempY - qrSize;
+
+          LPosX :=LPosX + nTempX;
+          LPosY :=LPosY + nTempY;
+
+          // 전체적으로 QR이 약간 밀려 보이는 증상 보정
+          if LOrientation = 1 then
+          begin
+            LPosX := LPosX - 4;
+            LPosY := LPosY - 8;
+          end
+          else
+          begin
+            LPosX := LPosX - 5;
+            LPosY := LPosY - 10;
+          end;
+
+          sAnsiStr := LTextValue;
+          PrintQRCode(
+                      LPosX,
+                      LPosY,
+                      2,  // QRMODE_2
+                      30, // 에러보정레벨?
+                      LQRCodeSize,
+                      LRotation,
+                      PAnsiChar(sAnsiStr)
+          );
+
+        end
+        else
+        begin
+          if LIsBold = True then
+            PrintTrueFontW(LPosX, LPosY, PChar('굴림'), LFontSize, LRotation, False, True, False, PChar(LTextValue), True)
+          else
+            PrintTrueFontW(LPosX, LPosY, PChar('굴림'), LFontSize, LRotation, False, False, False, PChar(LTextValue), True);
+        end;
 
         Next;
       end;
+
+      //SetConfigOfPrinter(SLCS_PRINTER_SETTING_SPEED, LDensity, LOrientation, LAutoCut, LCuttingPeriod, LBackFeeding);   // 프린터의 인쇄 속도, 농도, 인쇄 방향, 절단 옵션을 설정
+      //                                   인쇄속도, 인쇄농도,     인쇄방향, 절단동작,       절단간격,    TRUE(고정)
+      SetConfigOfPrinter(5, LDensity, LOrientation, True, 1, True);
+
+      Prints(1, 1);
+      DisconnectPrinter;
+
       Result := True;
     finally
       EnableControls;
     end;
+
+
   except
     on E: Exception do
       AResMsg := E.Message;

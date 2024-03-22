@@ -29,9 +29,9 @@ object PluginForm: TPluginForm
     Transparent = True
   end
   object lblBarcodeNotice1: TLabel
-    Left = 118
+    Left = 98
     Top = 149
-    Width = 465
+    Width = 505
     Height = 149
     Alignment = taCenter
     AutoSize = False
@@ -70,9 +70,9 @@ object PluginForm: TPluginForm
     WordWrap = True
   end
   object lblBarcodeNotice3: TLabel
-    Left = 118
+    Left = 98
     Top = 666
-    Width = 465
+    Width = 505
     Height = 127
     Alignment = taCenter
     AutoSize = False

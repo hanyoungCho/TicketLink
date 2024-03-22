@@ -2505,7 +2505,7 @@ object TLSettingForm: TTLSettingForm
       AlignWithMargins = True
       Left = 5
       Top = 83
-      Width = 604
+      Width = 316
       Height = 414
       Margins.Left = 5
       Margins.Top = 5
@@ -2640,6 +2640,27 @@ object TLSettingForm: TTLSettingForm
       Caption = #52636#47141
       TabOrder = 4
       OnClick = Button5Click
+    end
+    object Memo1: TMemo
+      AlignWithMargins = True
+      Left = 331
+      Top = 83
+      Width = 510
+      Height = 414
+      Margins.Left = 5
+      Margins.Top = 5
+      Margins.Right = 5
+      Margins.Bottom = 5
+      Color = clBlack
+      Font.Charset = HANGEUL_CHARSET
+      Font.Color = clLime
+      Font.Height = -13
+      Font.Name = #44404#47548
+      Font.Style = []
+      ParentFont = False
+      ScrollBars = ssBoth
+      TabOrder = 5
+      WordWrap = False
     end
   end
 end

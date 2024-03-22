@@ -45,7 +45,7 @@ object PluginForm: TPluginForm
   end
   object imgTicketPrintComplete: TImage
     Left = 270
-    Top = 180
+    Top = 140
     Width = 160
     Height = 160
     Stretch = True
@@ -126,10 +126,11 @@ object PluginForm: TPluginForm
     object lblMessage2: TLabel
       Left = 0
       Top = 47
-      Width = 219
-      Height = 36
+      Width = 580
+      Height = 126
       Align = alTop
       Alignment = taCenter
+      AutoSize = False
       Caption = #51104#49884#47564' '#44592#45796#47140' '#51452#49464#50836'.'
       Color = 3155225
       Font.Charset = HANGEUL_CHARSET
@@ -145,10 +146,11 @@ object PluginForm: TPluginForm
     object lblMessage1: TLabel
       Left = 0
       Top = 0
-      Width = 289
+      Width = 580
       Height = 47
       Align = alTop
       Alignment = taCenter
+      AutoSize = False
       Caption = #54000#53011#51012' '#52636#47141' '#51473#51077#45768#45796'.'
       Color = 3155225
       Font.Charset = HANGEUL_CHARSET

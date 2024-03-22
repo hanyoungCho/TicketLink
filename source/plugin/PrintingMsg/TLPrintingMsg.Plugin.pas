@@ -144,6 +144,7 @@ end;
 
 procedure TPluginForm.ProcessMessages(AMsg: TPluginMessage);
 begin
+
   if (AMsg.Command = CPC_INIT) then
   begin
     FOwnerID := AMsg.ParamByInteger(CPP_OWNER_ID);
@@ -201,11 +202,14 @@ procedure TPluginForm.DoPrintComplete;
 begin
   (imgTicketPrinting.Picture.Graphic as TGIFImage).Animate := False;
   imgTicketPrinting.Visible := False;
+  //qa_v0.3_20240216 - 14 page
+  panMessage.Top := 356; //416
   lblMessage1.Caption := GetTextLocale(['티켓 출력이 완료 되었습니다.', 'Ticket printing complete.', 'チケットを出力しました。', '门票打印结束。']);
-  lblMessage2.Caption := GetTextLocale(['사용하신 신용카드를 회수하셨는지 확인해 주세요.' + _CRLF + '이용해 주셔서 고맙습니다.',
-                                        'Please make sure you have retrieved your credit card.' + _CRLF + 'Thank you.',
-                                        'ご使用のクレジットカードを回収したか、もう一度ご確認ください。' + _CRLF + 'ご利用いただきましてありがとうございました。',
-                                        '请确认是否取出所使用银行卡。' + _CRLF + '感谢您的使用。']);
+  lblMessage2.Caption := GetTextLocale(['티켓출력이 되지 않을 경우 매표소에 문의하여' + _CRLF + '주시기 바랍니다.',
+                                        'Please visit the ticket office ' + _CRLF + 'if your ticket is not being printed.',
+                                        'チケットを出力できない場合は、' + _CRLF + 'チケット売り場にお問い合わせください。',
+                                        '若门票打印失败，' + _CRLF + '请咨询售票处。']);
+  lblNotice.Caption := '';
   StreamToPicture(imgTicketPrintComplete.Picture, Global.ThemeInfo.Images.ico_complete.Stream);
   imgTicketPrintComplete.Visible := True;
   CheckTimeout := True;
@@ -217,12 +221,13 @@ begin
   (imgTicketPrinting.Picture.Graphic as TGIFImage).Animate := False;
   imgTicketPrinting.Visible := False;
   lblMessage1.AutoSize := False;
+  panMessage.Top := 356; //416
   lblMessage1.Caption := GetTextLocale(['프린터에 장애가 발생하여' + _CRLF + '무인발권기 이용이 불가합니다.',
                                         'Ticketing service is unavailable as there seems ' + _CRLF + 'to be an error occurred to the printer.',
                                         'プリンターにエラーが発生したため、' + _CRLF + '無人発券機を利用できません。',
                                         '打印机出现故障，' + _CRLF + '无法使用无人售票机。']);
-  //lblMessage2.Caption := GetTextLocale(['매표소에 문의하여 주십시오.', 'Please contact the ticket office.']);
   lblMessage2.Caption := GetTextLocale(['매표소로 문의하여 주시기 바랍니다.', 'Please visit the ticket office.', '予約詳細の場所情報をご確認ください。', '请前往售票处咨询。']);
+  lblNotice.Caption := '';
   lblMessage1.AutoSize := True;
   StreamToPicture(imgTicketPrintComplete.Picture, Global.ThemeInfo.Images.ico_alert.Stream);
   imgTicketPrintComplete.Visible := True;
@@ -233,7 +238,11 @@ end;
 procedure TPluginForm.DoPrintOut;
 var
   LResMsg: string;
+  LErrMsg: string;
+label
+  GO_RETRY;
 begin
+  (*  chy test
   TTask.Run(
     procedure
     var
@@ -243,15 +252,25 @@ begin
         //출력할 영수증 및 티켓 데이터 생성
         if not DM.GetPrintingScript(FReceiptNo, FReserveNo, FReceiptPrint, LErrMsg) then
           raise Exception.Create(LErrMsg);
-
+        { chy test
         //티켓 프린터로 티켓 출력
         if Global.TicketPrinter.Enabled and
            Global.TicketPrinter.Active and
-           (Length(Global.TicketTemplateList) > 0) then
+           (Global.TicketTemplateCount > 0) then
         begin
           if not Global.TicketPrinter.Active then
-            //raise Exception.Create(GetTextLocale(['매표소에 문의하여 주십시오.', 'Please contact the ticket office.']));
             raise Exception.Create(GetTextLocale(['매표소로 문의하여 주시기 바랍니다.', 'Please visit the ticket office.', '予約詳細の場所情報をご確認ください。', '请前往售票处咨询。']));
+          if not DoPrintTicketLabel(DM.MTTicketTemplate, LResMsg) then
+            raise Exception.Create(GetTextLocale(['장애가 발생하여 무인발권기 이용이 불가합니다.' + _CRLF + LResMsg,
+                                                  'Ticketing service is unavailable as there seems ' + _CRLF + 'to be an error occurred to the printer.',
+                                                  'エラーが発生したため、' + _CRLF + '無人発券機を利用できません。',
+                                                  '发生错误，' + _CRLF + '无法使用无人售票机。']));
+        end;
+        }
+
+        if Global.TicketPrinter.Enabled and
+           (Global.TicketTemplateCount > 0) then
+        begin
           if not DoPrintTicketLabel(DM.MTTicketTemplate, LResMsg) then
             raise Exception.Create(GetTextLocale(['장애가 발생하여 무인발권기 이용이 불가합니다.' + _CRLF + LResMsg,
                                                   'Ticketing service is unavailable as there seems ' + _CRLF + 'to be an error occurred to the printer.',
@@ -273,6 +292,47 @@ begin
         end;
       end;
     end);
+  *)
+
+    try
+      //출력할 영수증 및 티켓 데이터 생성
+      if not DM.GetPrintingScript(FReceiptNo, FReserveNo, FReceiptPrint, LErrMsg) then
+        raise Exception.Create(LErrMsg);
+
+      GO_RETRY:
+
+      if Global.TicketPrinter.Enabled and
+         (Global.TicketTemplateCount > 0) then
+      begin
+        if not DoPrintTicketLabel(DM.MTTicketTemplate, LResMsg) then
+        begin
+          if LResMsg = '72' then
+          begin
+            AddLog('TPluginForm.DoPrintOut - DoPrintTicketLabel 72 GO_RETRY');
+            goto GO_RETRY;
+          end
+          else
+            raise Exception.Create(GetTextLocale(['장애가 발생하여 무인발권기 이용이 불가합니다.' + _CRLF + LResMsg,
+                                                'Ticketing service is unavailable as there seems ' + _CRLF + 'to be an error occurred to the printer.',
+                                                'エラーが発生したため、' + _CRLF + '無人発券機を利用できません。',
+                                                '发生错误，' + _CRLF + '无法使用无人售票机。']));
+        end;
+      end;
+
+      //영수증 또는 영수증 프린터로 티켓 출력
+      if not Global.ReceiptPrintManager.DoPrint(Global.ReceiptPrintManager.PrintJson, LErrMsg) then
+        raise Exception.Create(LErrMsg);
+
+      SendPluginCommand(CPC_PRINT_COMPLETE, 0, Self.PluginID);
+    except
+      on E: Exception do
+      begin
+        Global.ReceiptPrinter.ErrorCode := 90;
+        Global.ReceiptPrinter.LastError := E.Message;
+        SendPluginCommand(CPC_PRINT_ERROR, 0, Self.PluginID);
+      end;
+    end;
+
 end;
 
 procedure TPluginForm.SetCheckTimeout(const ACheckTimeout: Boolean);

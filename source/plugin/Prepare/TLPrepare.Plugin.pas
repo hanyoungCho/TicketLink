@@ -28,7 +28,7 @@ type
     IsContentsDownload: Boolean;
     IsOpenBarcodeScanner: Boolean;
     IsOpenReceiptPrinter: Boolean;
-    IsOpenTicketPrinter: Boolean;
+    //IsOpenTicketPrinter: Boolean;
     IsICReaderVerify: Boolean;
     IsPAYCOCertify: Boolean;
   end;
@@ -55,6 +55,7 @@ type
     FPrepareStatus: TPrepareStatus;
     FPrepareSuccess: Boolean;
     FPrepareRetry: Integer;
+    FPrepareType: Integer;
 
     procedure ProcessMessages(AMsg: TPluginMessage);
     function OpenBarcodeScanner(var AErrMsg: string): Boolean;
@@ -143,6 +144,7 @@ begin
   if (AMsg.Command = CPC_INIT) then
   begin
     FOwnerID := AMsg.ParamByInteger(CPP_OWNER_ID);
+    FPrepareType := AMsg.ParamByInteger(CPP_VALUE);
     ApplyTheme;
   end;
 
@@ -241,7 +243,8 @@ begin
     Inc(LProgress);
     LJobName := '로컬 데이터베이스 접속';
     WorkStart(LJobName, LProgress);
-    if not FPrepareStatus.IsLocalDB then
+
+    if (not FPrepareStatus.IsLocalDB) and (FPrepareType = 0) then
     begin
       LLocalDB := Global.DataDir + 'TicketLink.adb';
       if not DM.InitDB(LLocalDB, True, LErrMsg) then
@@ -345,7 +348,7 @@ begin
       FPrepareStatus.IsOpenReceiptPrinter := True;
       WorkSuccess(LJobName, LProgress);
     end;
-
+    { chy test
     Inc(LProgress);
     LJobName := '티켓 프린터 검사';
     WorkStart(LJobName, LProgress);
@@ -361,7 +364,7 @@ begin
       FPrepareStatus.IsOpenTicketPrinter := True;
       WorkSuccess(LJobName, LProgress);
     end;
-
+    }
     Inc(LProgress);
     LJobName := '신용카드 단말기 무결성 검사';
     WorkStart(LJobName, LProgress);
@@ -687,7 +690,7 @@ begin
         if not CheckEnumComPorts(LComPort, LErrMsg) then
           raise Exception.Create(LErrMsg);
 
-        ComDevice.Open;
+        //ComDevice.Open;
         Active := True;
       end;
       Result := True;

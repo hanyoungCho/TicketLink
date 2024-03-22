@@ -9,7 +9,8 @@ uses
   { Plugin System }
   uPluginManager, uPluginModule, uPluginMessages,
   { TMS }
-  AdvSmoothButton, AdvShapeButton;
+  AdvSmoothButton, AdvShapeButton, cxGraphics, cxLookAndFeels,
+  cxLookAndFeelPainters, Vcl.Menus, cxButtons, dxGDIPlusClasses;
 
 {$I ..\..\common\Common.TLGlobal.inc}
 
@@ -64,7 +65,8 @@ implementation
 
 uses
   { Project }
-  Common.TLGlobal, Common.TLCommonLib, Common.TLDM, Common.TLMsgBox;
+  Common.TLGlobal, Common.TLCommonLib, Common.TLDM, Common.TLMsgBox,
+  Common.TLTicketPrintManager;
 
 {$R *.dfm}
 
@@ -264,10 +266,12 @@ begin
     StreamToPicture(btnLocaleJP.Picture, Images.ico_locale_jpn.Stream);
     StreamToPicture(btnLocaleCN.Picture, Images.ico_locale_chn.Stream);
     StreamToPicture(imgMainButtonBack.Picture, Images.btn_ticket_background.Stream);
-    StreamToPicture(btnOpenTicketing.Picture, Images.btn_ticket_printing_default.Stream);
-    StreamToPicture(btnOpenTicketing.PictureDown, Images.btn_ticket_printing_pressed.Stream);
-    StreamToPicture(btnOpenTicketBuy.Picture, Images.btn_ticket_purchase_default.Stream);
-    StreamToPicture(btnOpenTicketBuy.PictureDown, Images.btn_ticket_purchase_pressed.Stream);
+    //StreamToPicture(btnOpenTicketing.Picture, Images.btn_ticket_printing_default.Stream);
+    StreamToPicture(btnOpenTicketing.Picture, Images.btn_ticket_printing_default_kor.Stream);
+    //StreamToPicture(btnOpenTicketing.PictureDown, Images.btn_ticket_printing_pressed.Stream);
+    //StreamToPicture(btnOpenTicketBuy.Picture, Images.btn_ticket_purchase_default.Stream);
+    StreamToPicture(btnOpenTicketBuy.Picture, Images.btn_ticket_purchase_default_kor.Stream);
+    //StreamToPicture(btnOpenTicketBuy.PictureDown, Images.btn_ticket_purchase_pressed.Stream);
   finally
     FThemeUpdated := False;
   end;
@@ -281,25 +285,35 @@ begin
         begin
           lblBodyMainStartNotice.Caption := '외국인 전용 티켓링크 사이트를 통해 예매한 티켓은 키오스크 발권이 불가합니다.' + _CRLF +
           '티켓정보 확인을 위해 매표소를 이용해주시기 바랍니다.';
+          StreamToPicture(btnOpenTicketing.Picture, Global.ThemeInfo.Images.btn_ticket_printing_default_kor.Stream);
+          StreamToPicture(btnOpenTicketBuy.Picture, Global.ThemeInfo.Images.btn_ticket_purchase_default_kor.Stream);
         end;
       TKioskLocale.klEnglish:
         begin
           lblBodyMainStartNotice.Caption := 'All the tickets reserved through ''foreigner-only Ticketlink website'' CANNOT be printed through the Kiosk.' + _CRLF +
           ' Please use offline ticket box to access your ticket information.';
+          StreamToPicture(btnOpenTicketing.Picture, Global.ThemeInfo.Images.btn_ticket_printing_default_eng.Stream);
+          StreamToPicture(btnOpenTicketBuy.Picture, Global.ThemeInfo.Images.btn_ticket_purchase_default_eng.Stream);
         end;
       TKioskLocale.klJapanese:
         begin
           lblBodyMainStartNotice.Caption := '外国人専用のチケットリンクサイトにて予約したチケットは、キオスク発券ができません。' + _CRLF +
           'チケット情報を確認するため、チケット売り場をご利用ください。';
+          StreamToPicture(btnOpenTicketing.Picture, Global.ThemeInfo.Images.btn_ticket_printing_default_jpn.Stream);
+          StreamToPicture(btnOpenTicketBuy.Picture, Global.ThemeInfo.Images.btn_ticket_purchase_default_jpn.Stream);
         end;
       TKioskLocale.klChinese:
         begin
           lblBodyMainStartNotice.Caption := 'KIOSK暂不支持打印通过外国人专用购票链接网站购买的票。' + _CRLF +
           '请您前往售票处确认购票信息。';
+          StreamToPicture(btnOpenTicketing.Picture, Global.ThemeInfo.Images.btn_ticket_printing_default_chn.Stream);
+          StreamToPicture(btnOpenTicketBuy.Picture, Global.ThemeInfo.Images.btn_ticket_purchase_default_chn.Stream);
         end;
       else
+      begin
         lblBodyMainStartNotice.Caption := 'Here are your reservation details.' + _CRLF +
           'Please review the details and proceed to print your ticket.';
+      end;
     end;
 
     //파트너사 로고 이미지는 Setting API를 통해 별도 다운로드

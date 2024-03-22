@@ -176,7 +176,7 @@ object PluginForm: TPluginForm
       Left = 122
       Top = 211
       Width = 396
-      Height = 624
+      Height = 648
       AntiAlias = aaAntiAlias
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
@@ -193,7 +193,7 @@ object PluginForm: TPluginForm
       Left = 561
       Top = 211
       Width = 396
-      Height = 624
+      Height = 648
       AntiAlias = aaAntiAlias
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clWindowText
